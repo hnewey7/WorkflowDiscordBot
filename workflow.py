@@ -22,7 +22,8 @@ class Workflow():
 
 class Project():
 
-    def __init__(self,deadline) -> None:
+    def __init__(self,title,deadline) -> None:
         self.tasks = []
+        self.title = title
         self.deadline = deadline
 
