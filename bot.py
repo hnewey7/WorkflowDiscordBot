@@ -3,16 +3,13 @@ import commands
 from workflow import Workflow
 
 
-async def receive_input(message) -> str:
-    return message.content
-
-
 def run_discord_bot():
     # Initialising bot.
     TOKEN = 'MTE5MTQ0NzQ5OTM4NzQzNzEwOA.GgSomy.bK3obSpCL8KdShCpJss8zyw3DOFcb5saIL785g'
     intents = discord.Intents.default()
     intents.message_content = True
     client = discord.Client(intents=intents)
+    
 
     # Creating new workflow.
     workflow = Workflow()
