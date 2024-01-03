@@ -16,8 +16,13 @@ class Workflow():
         self.projects.append(new_project)
 
     # Remove existing project.
-    def del_project(self,project) -> None:
-        self.projects.remove(project)
+    def del_project(self,index) -> None:
+        if len(self.projects) <= 0:
+            raise EmptyProjectListError
+        elif index < 0 or index >= len(self.projects):
+            raise IndexOutOfRangeError
+        else:
+            del self.projects[index]
 
 
 class Project():
@@ -27,3 +32,11 @@ class Project():
         self.title = title
         self.deadline = deadline
 
+
+class EmptyProjectListError(Exception):
+    "Raised when action performed on empty project list."
+    pass
+
+class IndexOutOfRangeError(Exception):
+    "Raised when index out of range."
+    pass

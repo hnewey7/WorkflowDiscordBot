@@ -9,9 +9,10 @@ def run_discord_bot():
     intents = discord.Intents.default()
     intents.message_content = True
     client = discord.Client(intents=intents)
-    
+
 
     # Creating new workflow.
+    global workflow
     workflow = Workflow()
     print("New workflow created.")
 
