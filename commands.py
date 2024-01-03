@@ -8,12 +8,14 @@ Command script for Workflow Bot
 def handle_command(command, workflow) -> str:
      # Getting components of command.
     main_command = command.split(" ",1)[0].lower()
-    parameter_section = " " + command.split(" ",1)[1]
+    parameter_section = " " + command.split(" ",1)[1] if len(command.split(" ")) != 1 else ""
     
     parameters = extract_parameters(parameter_section)
 
     if main_command == "add_project":
         response = add_project_command(parameters,workflow=workflow)
+    elif main_command == "show_projects":
+        response = show_projects_command(workflow=workflow)
 
     return response
 
@@ -43,5 +45,23 @@ def add_project_command(parameters,workflow):
         workflow.add_project(title,deadline)
     except KeyError:
         response = 'Please include -title when adding projects.'
+
+    return response
+
+
+
+# Show existing projects command.
+def show_projects_command(workflow):
+    projects = workflow.projects
+
+    if projects:
+        response = "**Existing Projects:**\n"
+        for index, project in enumerate(projects):
+            if not project.deadline:
+                response += f"{index}. {project.title}\n"
+            else:
+                response += f"{index}. {project.title} - Deadline ({project.deadline})\n"
+    else:
+        response = "No current existing projects, use !add_project."
 
     return response
