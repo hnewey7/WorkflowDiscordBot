@@ -4,6 +4,8 @@ Workflow Object
 2nd Jan 2024
 '''
 
+from datetime import datetime
+
 class Workflow():
 
     def __init__(self) -> None:
@@ -24,13 +26,22 @@ class Workflow():
         else:
             del self.projects[index]
 
+    # Get project by title.
+    def get_project_from_title(self,title):
+        for project in self.projects:
+            if title == project.title:
+                return project
+
 
 class Project():
 
     def __init__(self,title,deadline) -> None:
         self.tasks = []
         self.title = title
-        self.deadline = deadline
+        self.deadline = convert_deadline(deadline)
+
+    def get_unix_deadline(self) -> int:
+        return round(self.deadline.timestamp())
 
 
 class EmptyProjectListError(Exception):
@@ -40,3 +51,17 @@ class EmptyProjectListError(Exception):
 class IndexOutOfRangeError(Exception):
     "Raised when index out of range."
     pass
+
+class DatetimeConversionError(Exception):
+    "Raised when deadline input cannot be converted to a datetime object."
+    pass
+
+
+# Converting string input to datetime object.
+def convert_deadline(deadline_input):
+    try:
+        deadline = datetime.strptime(deadline_input, "%H:%M:%S %d-%m-%Y")
+    except:
+        raise DatetimeConversionError
+
+    return deadline

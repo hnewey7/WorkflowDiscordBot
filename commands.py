@@ -3,8 +3,7 @@ Command script for Workflow Bot
 @author: Harry New
 1st Jan 2024
 '''
-
-from workflow import IndexOutOfRangeError,EmptyProjectListError
+from workflow import IndexOutOfRangeError, EmptyProjectListError, DatetimeConversionError
 
 # Handling all commands.
 def handle_command(command, workflow) -> str:
@@ -46,7 +45,7 @@ def extract_parameters(content):
 # Help command.
 def help_command():
     response = ">>> ## Commands \n\n \
-`!add_project -title [TITLE] -deadline (DEADLINE)` \n \
+`!add_project -title [TITLE] -deadline (00:00:00 01-01-2000)` \n \
 Adds new project to the workflow [requires -title]. \n\n \
 `!del_project -index [INDEX]` \n \
 Deletes project at specific index [requires -index]. \n\n \
@@ -65,9 +64,12 @@ def add_project_command(parameters,workflow):
         title = parameters['title']
         deadline = parameters['deadline'] if 'deadline' in parameters.keys() else None
         workflow.add_project(title,deadline)
-        response = f"New project (**{title}**) has been added, with deadline (**{parameters['deadline']}**)." if 'deadline' in parameters.keys() else f"New project (**{title}**)."
+        deadline = workflow.get_project_from_title(title).get_unix_deadline()
+        response = f"New project (**{title}**) has been added, with deadline (**<t:{deadline}:R>**)." if 'deadline' in parameters.keys() else f"New project (**{title}**)."
     except KeyError:
         response = 'Please include `-title` when adding projects.'
+    except DatetimeConversionError:
+        response = "Please input `-deadline` in format '%H:%M:%S %d-%m-%Y'"
 
     return response
 
@@ -100,7 +102,7 @@ def show_projects_command(workflow):
             if not project.deadline:
                 response += f"### {index}. {project.title}\n"
             else:
-                response += f"### {index}. {project.title} - Deadline ({project.deadline})\n"
+                response += f"### {index}. {project.title} - Deadline (<t:{project.get_unix_deadline()}:R>)\n"
     else:
         response = "No current existing projects, use `!add_project`."
 
