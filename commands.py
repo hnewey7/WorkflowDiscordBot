@@ -20,7 +20,7 @@ def handle_command(command, workflow) -> str:
     elif main_command == "add_project":
         response = add_project_command(parameters,workflow=workflow)
     elif main_command == "del_project":
-        response = del_project_command(parameters,workflow=workflow)
+        response = del_project_command(first_parameter,parameters,workflow=workflow)
     elif main_command == "edit_project":
         response = edit_project_command(parameters,workflow=workflow)
     else:
@@ -39,7 +39,7 @@ def extract_parameters(content):
 
     for parameter in multiple_parameters:
         if parameter == multiple_parameters[0]:
-            first_parameter = parameter.split(' ', 0)
+            first_parameter = parameter.split(' ')[0]
         parameter_components = parameter.split(' ', 1)
         parameter_dictionary[parameter_components[0]] = parameter_components[1]
 
