@@ -11,7 +11,7 @@ def handle_command(command, workflow) -> str:
     main_command = command.split(" ",1)[0].lower()
     parameter_section = " " + command.split(" ",1)[1] if len(command.split(" ")) != 1 else ""
 
-    parameters = extract_parameters(parameter_section)
+    first_parameter,parameters = extract_parameters(parameter_section)
 
     if main_command == "help":
         response = help_command()
@@ -21,6 +21,8 @@ def handle_command(command, workflow) -> str:
         response = add_project_command(parameters,workflow=workflow)
     elif main_command == "del_project":
         response = del_project_command(parameters,workflow=workflow)
+    elif main_command == "edit_project":
+        response = edit_project_command(parameters,workflow=workflow)
     else:
         response = "Please enter a valid command."
 
@@ -36,10 +38,13 @@ def extract_parameters(content):
     parameter_dictionary = {}
 
     for parameter in multiple_parameters:
+        if parameter == multiple_parameters[0]:
+            first_parameter = parameter.split(' ', 0)
         parameter_components = parameter.split(' ', 1)
         parameter_dictionary[parameter_components[0]] = parameter_components[1]
 
-    return parameter_dictionary
+    return first_parameter,parameter_dictionary
+
 
 
 # Help command.
@@ -76,15 +81,12 @@ def add_project_command(parameters,workflow):
 
 
 # Deleting project command.
-def del_project_command(parameters,workflow):
+def del_project_command(priority,parameters,workflow):
     try:
-        if 'title' not in parameters.keys():
+        if 'index' == priority:
             index = int(parameters['index'])
             deleted = workflow.del_project_by_index(index-1)
-        elif 'index' not in parameters.keys():
-            title = parameters['title']
-            deleted = workflow.del_project_by_title(title)
-        else:
+        elif 'title' == priority:
             title = parameters['title']
             deleted = workflow.del_project_by_title(title)
         response = f"Project (**{deleted.title}**) has been deleted."
@@ -114,3 +116,9 @@ def show_projects_command(workflow):
         response = "No current existing projects, use `!add_project`."
 
     return response
+
+
+# Edit project command.
+def edit_project_command(parameters,workflow):
+    pass
+        
