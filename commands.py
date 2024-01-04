@@ -3,7 +3,7 @@ Command script for Workflow Bot
 @author: Harry New
 1st Jan 2024
 '''
-from workflow import ProjectNotInListError, EmptyProjectListError, DatetimeConversionError
+from workflow import ProjectNotInListError, EmptyProjectListError, DatetimeConversionError, NotEnoughParametersError
 
 # Handling all commands.
 def handle_command(command, workflow) -> str:
@@ -22,7 +22,7 @@ def handle_command(command, workflow) -> str:
     elif main_command == "del_project":
         response = del_project_command(first_parameter,parameters,workflow=workflow)
     elif main_command == "edit_project":
-        response = edit_project_command(parameters,workflow=workflow)
+        response = edit_project_command(first_parameter,parameters,workflow=workflow)
     else:
         response = "Please enter a valid command."
 
@@ -35,6 +35,7 @@ def extract_parameters(content):
     # Splitting parameters.
     multiple_parameters = content.split(" -")[1:]
 
+    first_parameter = ""
     parameter_dictionary = {}
 
     for parameter in multiple_parameters:
@@ -50,10 +51,12 @@ def extract_parameters(content):
 # Help command.
 def help_command():
     response = ">>> ## Commands \n\n \
-`!add_project -title [TITLE] -deadline (00:00:00 01-01-2000)` \n \
+`!add_project -title [TITLE] -deadline (%H:%M:%S %d-%m-%Y)` \n \
 Adds new project to the workflow [requires `-title`]. \n\n \
 `!del_project [-title (TITLE) -index (INDEX)]` \n \
 Deletes project from the workflow [requires either `-title` or `-index`]. \n\n \
+`!edit_project [-title (TITLE) -index (INDEX)] -deadline (%H:%M:%S %d-%m-%Y)`\n \
+Edits project parameters [requires either `-title` or `-index`].\n\n \
 `!help` \n \
 Lists all available commands. \n\n \
 `!show_projects` \n \
@@ -69,8 +72,8 @@ def add_project_command(parameters,workflow):
         title = parameters['title']
         deadline = parameters['deadline'] if 'deadline' in parameters.keys() else None
         workflow.add_project(title,deadline)
-        deadline = workflow.get_project_from_title(title).get_unix_deadline()
-        response = f"New project (**{title}**) has been added, with deadline (**<t:{deadline}:R>**)." if 'deadline' in parameters.keys() else f"New project (**{title}**)."
+        project = workflow.get_project_from_title(title)
+        response = f"New project (**{project.title}**) has been added, with deadline (**<t:{project.get_unix_deadline()}:R>**)." if 'deadline' in parameters.keys() else f"New project (**{title}**)."
     except KeyError:
         response = 'Please include `-title` when adding projects.'
     except DatetimeConversionError:
@@ -109,9 +112,9 @@ def show_projects_command(workflow):
         response = ">>> # Existing Projects:\n"
         for index, project in enumerate(projects):
             if not project.deadline:
-                response += f"### {index}. {project.title}\n"
+                response += f"### {workflow.projects.index(project)+1}. {project.title}\n"
             else:
-                response += f"### {index}. {project.title} - Deadline (<t:{project.get_unix_deadline()}:R>)\n"
+                response += f"### {workflow.projects.index(project)+1}. {project.title} - Deadline (<t:{project.get_unix_deadline()}:R>)\n"
     else:
         response = "No current existing projects, use `!add_project`."
 
@@ -119,6 +122,26 @@ def show_projects_command(workflow):
 
 
 # Edit project command.
-def edit_project_command(parameters,workflow):
-    pass
+def edit_project_command(priority,parameters,workflow):
+    try:
+        if len(workflow.projects) <= 0:
+            raise EmptyProjectListError
         
+        if 'index' == priority:
+            project = workflow.edit_project_by_index(parameters)
+            response = f"Project (**{project.title}**) has priority (**{workflow.projects.index(project)+1}**)." if not project.deadline else \
+            f"Project (**{project.title}**) has priority (**{workflow.projects.index(project)+1}**) and deadline (**<t:{project.get_unix_deadline()}:R>**)"
+        elif 'title' == priority:
+            project = workflow.edit_project_by_title(parameters)
+            response = f"Project (**{project.title}**) has priority (**{workflow.projects.index(project)+1}**)." if not project.deadline else \
+            f"Project (**{project.title}**) has priority (**{workflow.projects.index(project)+1}**) and deadline (**<t:{project.get_unix_deadline()}:R>**)"
+        else:
+            response = "No project selected, use `-title` or `-index` as parameters to select a valid project."
+
+    except EmptyProjectListError:
+        response ="No current existing projects, use `!add_project`."
+    except ProjectNotInListError:
+        response = "Invalid project reference, use `!show_projects` to see existing projects."
+    except NotEnoughParametersError:
+        response = "Please include a parameter to edit in the command, e.g `-title`, `-index` or `-deadline`."
+    return response

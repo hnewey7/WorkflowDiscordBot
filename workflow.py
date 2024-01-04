@@ -36,6 +36,52 @@ class Workflow():
             deleted_project = self.get_project_from_title(title)
             self.projects.remove(deleted_project)
             return deleted_project
+        
+    # Edit project by index.
+    def edit_project_by_index(self, parameters):
+        if len(parameters.keys()) == 1:
+            raise NotEnoughParametersError
+        else:
+
+            index = int(parameters['index'])-1
+
+            if index < 0 or index > len(self.projects)-1:
+                raise ProjectNotInListError
+            else:
+                # Getting selected project.
+                selected_project = self.projects[index]
+            
+                if 'title' in parameters.keys():
+                    selected_project.title = parameters['title']
+                if 'deadline' in parameters.keys():
+                    selected_project.deadline = convert_deadline(parameters['deadline'])
+
+                return selected_project
+
+    # Edit project by title.
+    def edit_project_by_title(self, parameters):
+        if len(parameters.keys()) == 1:
+            raise NotEnoughParametersError
+        else:
+            # Getting selected project.
+            selected_project = self.get_project_from_title(parameters['title'])
+        
+            if 'index' in parameters.keys():
+
+                index = int(parameters['index']) -1
+
+                if index < len(self.projects) and index >= 0:
+                    original_index = self.projects.index(selected_project)
+                    self.projects[index],self.projects[original_index] = self.projects[original_index],self.projects[index]
+                else:
+                    raise ProjectNotInListError
+                
+            if 'deadline' in parameters.keys():
+                selected_project.deadline = convert_deadline(parameters['deadline'])
+
+            return selected_project
+
+    # - - - - - - - - - - - - - - - - - - - - - -
 
     # Get project by title.
     def get_project_from_title(self,title):
@@ -52,7 +98,10 @@ class Project():
     def __init__(self,title,deadline) -> None:
         self.tasks = []
         self.title = title
-        self.deadline = convert_deadline(deadline)
+        if deadline != None:
+            self.deadline = convert_deadline(deadline)
+        else:
+            self.deadline = None
 
     def get_unix_deadline(self) -> int:
         return round(self.deadline.timestamp())
@@ -68,6 +117,10 @@ class ProjectNotInListError(Exception):
 
 class DatetimeConversionError(Exception):
     "Raised when deadline input cannot be converted to a datetime object."
+    pass
+
+class NotEnoughParametersError(Exception):
+    "Raised when not enough parameters were provided."
     pass
 
 
