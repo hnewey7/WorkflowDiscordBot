@@ -24,7 +24,9 @@ class Workflow():
         elif index < 0 or index >= len(self.projects):
             raise IndexOutOfRangeError
         else:
+            deleted_project = self.projects[index]
             del self.projects[index]
+            return deleted_project
 
     # Get project by title.
     def get_project_from_title(self,title):

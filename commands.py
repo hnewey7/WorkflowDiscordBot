@@ -79,8 +79,8 @@ def add_project_command(parameters,workflow):
 def del_project_command(parameters,workflow):
     try:
         index = int(parameters['index'])
-        workflow.del_project(index-1)
-        response = f"Project (**Number {index}**) was deleted."
+        deleted = workflow.del_project(index-1)
+        response = f"Project (**{deleted.title}**) was deleted."
     except IndexOutOfRangeError:
         response = "Please enter a valid project index."
     except EmptyProjectListError:
