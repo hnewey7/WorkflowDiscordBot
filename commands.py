@@ -3,7 +3,7 @@ Command script for Workflow Bot
 @author: Harry New
 1st Jan 2024
 '''
-from workflow import IndexOutOfRangeError, EmptyProjectListError, DatetimeConversionError
+from workflow import ProjectNotInListError, EmptyProjectListError, DatetimeConversionError
 
 # Handling all commands.
 def handle_command(command, workflow) -> str:
@@ -46,9 +46,9 @@ def extract_parameters(content):
 def help_command():
     response = ">>> ## Commands \n\n \
 `!add_project -title [TITLE] -deadline (00:00:00 01-01-2000)` \n \
-Adds new project to the workflow [requires -title]. \n\n \
-`!del_project -index [INDEX]` \n \
-Deletes project at specific index [requires -index]. \n\n \
+Adds new project to the workflow [requires `-title`]. \n\n \
+`!del_project [-title (TITLE) -index (INDEX)]` \n \
+Deletes project from the workflow [requires either `-title` or `-index`]. \n\n \
 `!help` \n \
 Lists all available commands. \n\n \
 `!show_projects` \n \
@@ -78,15 +78,22 @@ def add_project_command(parameters,workflow):
 # Deleting project command.
 def del_project_command(parameters,workflow):
     try:
-        index = int(parameters['index'])
-        deleted = workflow.del_project(index-1)
-        response = f"Project (**{deleted.title}**) was deleted."
-    except IndexOutOfRangeError:
-        response = "Please enter a valid project index."
+        if 'title' not in parameters.keys():
+            index = int(parameters['index'])
+            deleted = workflow.del_project_by_index(index-1)
+        elif 'index' not in parameters.keys():
+            title = parameters['title']
+            deleted = workflow.del_project_by_title(title)
+        else:
+            title = parameters['title']
+            deleted = workflow.del_project_by_title(title)
+        response = f"Project (**{deleted.title}**) has been deleted."
+    except ProjectNotInListError:
+        response = "Please enter a valid project."
     except EmptyProjectListError:
         response = "No current existing projects."
     except KeyError:
-        response = "Please include `-index` when deleting projects."
+        response = "Please include either `-index` or `-title` when deleting projects."
 
     return response
 
