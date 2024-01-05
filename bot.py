@@ -1,5 +1,5 @@
 import discord
-import commands
+import discord.ext.commands as commands
 from workflow import Workflow
 
 
@@ -8,36 +8,19 @@ def run_discord_bot():
     TOKEN = 'MTE5MTQ0NzQ5OTM4NzQzNzEwOA.GgSomy.bK3obSpCL8KdShCpJss8zyw3DOFcb5saIL785g'
     intents = discord.Intents.default()
     intents.message_content = True
-    client = discord.Client(intents=intents)
-
+    
+    bot = commands.Bot(command_prefix="!", intents=intents)
 
     # Creating new workflow.
     global workflow
     workflow = Workflow()
     print("New workflow created.")
 
+    @bot.command()
+    async def button(ctx):
+        view = discord.ui.View()
+        button = discord.ui.Select(min_values=1,max_values=1,options=[discord.SelectOption(label="test")],disabled=False)
+        view.add_item(button)
+        await ctx.send(view=view)
 
-    @client.event
-    async def on_ready():
-        print(f'{client.user} is now running.')
-
-
-    @client.event
-    async def on_message(message):
-        # Ignoring bot messages.
-        if message.author == client.user:
-            return
-        
-        # Message info.
-        username = str(message.author)
-        user_message = str(message.content)
-        channel = str(message.channel)
-
-        print(f"{username} has said: '{user_message}' ({channel})")
-
-        # Evaluating command.
-        if user_message[0] == '!':
-            print(f"{username} has requested command.")
-            await message.channel.send(commands.handle_command(user_message[1:],workflow=workflow))
-
-    client.run(TOKEN)
+    bot.run(TOKEN)
