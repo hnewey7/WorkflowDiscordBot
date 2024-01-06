@@ -119,18 +119,16 @@ def run_discord_bot():
         initial_check = True
 
         while True:
-            # Creating content of message.
-            content = ''
+            # Creating embed for message.
+            embed = discord.Embed(color=discord.Color.yellow(),title="Existing Projects")
 
             if len(workflow.projects) != 0:
                 for project in workflow.projects:
-                    content += f'{workflow.projects.index(project)+1}. {project.title} - Deadline <t:{project.get_unix_deadline()}:R>\n' if project.deadline else \
-                    f'{workflow.projects.index(project)+1}. {project.title}\n'
+                    field_title = f'{workflow.projects.index(project)+1}. {project.title} - Deadline <t:{project.get_unix_deadline()}:R>' if project.deadline else \
+                    f'{workflow.projects.index(project)+1}. {project.title}'
+                    embed.add_field(name=field_title,value="No tasks.",inline=False)
             else:
-                content += 'No existing projects.\n '
-
-            # Creating embed for message.
-            embed = discord.Embed(color=discord.Color.yellow(),title="Existing Projects",description=content)
+                embed.description = 'No existing projects.'
 
             # Creating UI at bottom of message.
             view = ProjectButtonView(workflow=workflow)
