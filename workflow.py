@@ -1,7 +1,9 @@
 '''
 Workflow Object
+
+Created on Tuesday 2nd January 2024
 @author: Harry New
-2nd Jan 2024
+
 '''
 
 from datetime import datetime
@@ -16,6 +18,11 @@ class Workflow():
     def add_project(self, title, deadline) -> None:
         new_project = Project(title, deadline)
         self.projects.append(new_project)
+
+
+
+
+    '''
 
     # Remove existing project by index.
     def del_project_by_index(self,index):
@@ -90,7 +97,8 @@ class Workflow():
                 return project
         else:
             raise ProjectNotInListError
-        
+    
+            '''
 
 
 class Project():
@@ -98,10 +106,8 @@ class Project():
     def __init__(self,title,deadline) -> None:
         self.tasks = []
         self.title = title
-        if deadline != None:
-            self.deadline = convert_deadline(deadline)
-        else:
-            self.deadline = None
+        self.deadline = convert_deadline(deadline)
+
 
     def get_unix_deadline(self) -> int:
         return round(self.deadline.timestamp())

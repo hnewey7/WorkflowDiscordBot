@@ -1,6 +1,14 @@
+'''
+Bot Script for the Workflow Bot
+
+Created on Monday 1st January 2024
+@author: Harry New
+
+'''
+
 import discord
 import discord.ext.commands as commands
-from workflow import Workflow
+from workflow import Workflow, DatetimeConversionError
 
 
 class ProjectButtonView(discord.ui.View):
@@ -11,28 +19,45 @@ class ProjectButtonView(discord.ui.View):
 
     @discord.ui.button(label="Add Project", style=discord.ButtonStyle.success)
     async def add_project(self, interaction: discord.Interaction, button: discord.ui.Button):
-        # Sending initial response.
-        await interaction.response.send_message("**Please enter a project title:**")
-
+        # Check for correct user and channel.
         def check(message):
             return message.author == interaction.user and message.channel == interaction.channel
 
-        # Wait for title response and delete responses.
-        title = await bot.wait_for('message', timeout=30, check=check)
-        title_prompt = await interaction.original_response()
+        # Storing all messages.
+        message_objects = []
 
-        deadline_prompt = await interaction.followup.send("**Please enter a deadline for the project (%H:%M:%S %d-%m-%Y).**")
+        try:
+            # Sending title response.
+            await interaction.response.send_message("**Please enter a project title:**")
+            message_objects.append(await interaction.original_response())
+            title = await bot.wait_for('message', timeout=30, check=check)
+            message_objects.append(title)
 
-        deadline = await bot.wait_for('message', timeout=30, check=check)
+            # Sending deadline response.
+            deadline_prompt = await interaction.followup.send("**Please enter a deadline for the project (%H:%M:%S %d-%m-%Y).**")
+            message_objects.append(deadline_prompt)
+            deadline = await bot.wait_for('message', timeout=30, check=check)
+            message_objects.append(deadline)
 
-        self.workflow.add_project(title.content,deadline.content)
-
-        await deadline.delete()
-        await deadline_prompt.delete()
-        await title.delete()
-        await title_prompt.delete()
+            while True:
+                try:
+                    # Adding project to workflow.
+                    self.workflow.add_project(title.content,deadline.content)
+                    break
+                except DatetimeConversionError:
+                    # Prompting user to input correct format.
+                    deadline_error = await interaction.followup.send("**Invalid deadline, please try again.**")
+                    message_objects.append(deadline_error)
+                    deadline_error_response = await bot.wait_for('message', timeout=30, check=check)
+                    deadline = deadline_error_response
+                    # Storing each error.
+                    message_objects.append(deadline_error_response)
+        except TimeoutError:
+            pass
         
-        
+        # Deleting all messages.
+        for message in message_objects:
+            await message.delete()
 
 
 
