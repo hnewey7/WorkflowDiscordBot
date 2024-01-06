@@ -11,7 +11,8 @@ class ProjectButtonView(discord.ui.View):
 
     @discord.ui.button(label="Add Project", style=discord.ButtonStyle.success)
     async def add_project(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await interaction.response.send_message("Please enter a project title:")
+        # Sending initial response.
+        await interaction.response.send_message("**Please enter a project title:**")
 
         def check(message):
             return message.author == interaction.user and message.channel == interaction.channel
@@ -20,7 +21,7 @@ class ProjectButtonView(discord.ui.View):
         title = await bot.wait_for('message', timeout=30, check=check)
         title_prompt = await interaction.original_response()
 
-        deadline_prompt = await interaction.followup.send("Please enter a deadline for the project (%H:%M:%S %d-%m-%Y).")
+        deadline_prompt = await interaction.followup.send("**Please enter a deadline for the project (%H:%M:%S %d-%m-%Y).**")
 
         deadline = await bot.wait_for('message', timeout=30, check=check)
 
