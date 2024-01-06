@@ -5,6 +5,10 @@ from workflow import Workflow
 
 class ProjectButtonView(discord.ui.View):
 
+    def __init__(self,workflow):
+        super().__init__()
+        self.workflow = workflow
+
     @discord.ui.button(label="Add Project", style=discord.ButtonStyle.success)
     async def add_project(self, interaction: discord.Interaction, button: discord.ui.Button):
         await interaction.response.send_message("Please enter a project title:")
@@ -15,12 +19,19 @@ class ProjectButtonView(discord.ui.View):
         # Wait for title response and delete responses.
         title = await bot.wait_for('message', timeout=30, check=check)
         title_prompt = await interaction.original_response()
-        await title.delete()
-        await title_prompt.delete()
 
-        await interaction.followup.send("Please enter a deadline for the project (%H:%M:%S %d-%m-%Y).")
+        deadline_prompt = await interaction.followup.send("Please enter a deadline for the project (%H:%M:%S %d-%m-%Y).")
 
         deadline = await bot.wait_for('message', timeout=30, check=check)
+
+        self.workflow.add_project(title.content,deadline.content)
+
+        await deadline.delete()
+        await deadline_prompt.delete()
+        await title.delete()
+        await title_prompt.delete()
+        
+        
 
 
 
@@ -40,19 +51,30 @@ def run_discord_bot():
 
     @bot.command()
     async def projects(ctx):
-        # Creating content of message.
-        content = '>>> # Existing Projects:\n'
 
-        if len(workflow.projects) != 0:
-            for project in workflow.projects:
-                content += f'{workflow.projects.index(project)+1}. {project.title} - Deadline <t:{project.get_unit_deadline()}:R>\n' if project.deadline else \
-                f'{workflow.projects.index(project)+1}. {project.title}\n'
-        else:
-            content += '### No existing projects.\n '
+        initial_check = True
 
-        # Creating UI at bottom of message.
-        view = ProjectButtonView()
+        while True:
+            # Creating content of message.
+            content = '>>> # Existing Projects:\n'
 
-        await ctx.send(content=content,view=view,delete_after=300)
+            if len(workflow.projects) != 0:
+                for project in workflow.projects:
+                    content += f'### {workflow.projects.index(project)+1}. {project.title} - Deadline <t:{project.get_unix_deadline()}:R>\n' if project.deadline else \
+                    f'{workflow.projects.index(project)+1}. {project.title}\n'
+            else:
+                content += '### No existing projects.\n '
+
+            # Creating UI at bottom of message.
+            view = ProjectButtonView(workflow=workflow)
+
+            # Updating message.
+            if initial_check:
+                message = await ctx.send(content=content,view=view,delete_after=300)
+                initial_check = False
+                await bot.wait_for('message_delete')
+            else:
+                await message.edit(content=content,view=view,delete_after=300)
+                await bot.wait_for('message_delete')
 
     bot.run(TOKEN)

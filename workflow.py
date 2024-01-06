@@ -10,7 +10,7 @@ class Workflow():
 
     def __init__(self) -> None:
         # Storing projects in dictionary.
-        self.projects = []
+        self.projects = [Project('Test','00:00:00 07-01-2024')]
 
     # Create new project from title and add to dictionary.
     def add_project(self, title, deadline) -> None:
