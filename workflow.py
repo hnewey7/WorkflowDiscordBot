@@ -14,12 +14,14 @@ class Workflow():
         # Storing projects in dictionary.
         self.projects = [Project('Test','00:00:00 07-01-2024')]
 
-    # Create new project from title and add to dictionary.
+    # Create new project with title and deadline.
     def add_project(self, title, deadline) -> None:
         new_project = Project(title, deadline)
         self.projects.append(new_project)
 
-
+    # Remove project with number.
+    def del_project(self, number) -> None:
+        del self.projects[number-1]
 
 
     '''

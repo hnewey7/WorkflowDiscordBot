@@ -17,6 +17,7 @@ class ProjectButtonView(discord.ui.View):
         super().__init__()
         self.workflow = workflow
 
+
     @discord.ui.button(label="Add Project", style=discord.ButtonStyle.success)
     async def add_project(self, interaction: discord.Interaction, button: discord.ui.Button):
         # Check for correct user and channel.
@@ -34,7 +35,7 @@ class ProjectButtonView(discord.ui.View):
             message_objects.append(title)
 
             # Sending deadline response.
-            deadline_prompt = await interaction.followup.send("**Please enter a deadline for the project (%H:%M:%S %d-%m-%Y).**")
+            deadline_prompt = await interaction.followup.send("**Please enter a deadline for the project (%H:%M:%S %d-%m-%Y):**")
             message_objects.append(deadline_prompt)
             deadline = await bot.wait_for('message', timeout=30, check=check)
             message_objects.append(deadline)
@@ -50,7 +51,6 @@ class ProjectButtonView(discord.ui.View):
                     message_objects.append(deadline_error)
                     deadline_error_response = await bot.wait_for('message', timeout=30, check=check)
                     deadline = deadline_error_response
-                    # Storing each error.
                     message_objects.append(deadline_error_response)
         except TimeoutError:
             pass
@@ -58,6 +58,44 @@ class ProjectButtonView(discord.ui.View):
         # Deleting all messages.
         for message in message_objects:
             await message.delete()
+
+
+    @discord.ui.button(label="Delete Project", style=discord.ButtonStyle.danger)
+    async def del_project(self, interaction: discord.Interaction, button: discord.ui.Button):
+        # Check for correct user and channel.
+        def check(message):
+            return message.author == interaction.user and message.channel == interaction.channel
+
+        # Storing all messages.
+        message_objects = []
+
+        try:
+             # Sending number response.
+            await interaction.response.send_message("**Please enter a project number: **")
+            message_objects.append(await interaction.original_response())
+            number = await bot.wait_for('message', timeout=30, check=check)
+            message_objects.append(number)
+
+            while True:
+                try:
+                    # Deleting projects from the workflow.
+                    self.workflow.del_project(int(number.content))
+                    break
+                except:
+                    # Prompting user to re-enter a valid project number
+                    error_message = await interaction.followup.send("**Invalid project number, please try again.**")
+                    message_objects.append(error_message)
+                    error_response = await bot.wait_for('message',timeout=30,check=check)
+                    number = error_response
+                    message_objects.append(error_response)
+
+        except TimeoutError:
+            pass
+
+        # Deleting all messages.
+        for message in message_objects:
+            await message.delete()
+
 
 
 
