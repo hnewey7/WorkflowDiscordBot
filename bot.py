@@ -3,12 +3,34 @@ import discord.ext.commands as commands
 from workflow import Workflow
 
 
+class ProjectButtonView(discord.ui.View):
+
+    @discord.ui.button(label="Add Project", style=discord.ButtonStyle.success)
+    async def add_project(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await interaction.response.send_message("Please enter a project title:")
+
+        def check(message):
+            return message.author == interaction.user and message.channel == interaction.channel
+
+        # Wait for title response and delete responses.
+        title = await bot.wait_for('message', timeout=30, check=check)
+        title_prompt = await interaction.original_response()
+        await title.delete()
+        await title_prompt.delete()
+
+        await interaction.followup.send("Please enter a deadline for the project (%H:%M:%S %d-%m-%Y).")
+
+        deadline = await bot.wait_for('message', timeout=30, check=check)
+
+
+
 def run_discord_bot():
     # Initialising bot.
     TOKEN = 'MTE5MTQ0NzQ5OTM4NzQzNzEwOA.GgSomy.bK3obSpCL8KdShCpJss8zyw3DOFcb5saIL785g'
     intents = discord.Intents.default()
     intents.message_content = True
     
+    global bot
     bot = commands.Bot(command_prefix="!", intents=intents)
 
     # Creating new workflow.
@@ -29,13 +51,8 @@ def run_discord_bot():
             content += '### No existing projects.\n '
 
         # Creating UI at bottom of message.
-        view = discord.ui.View()
-        add_project_button = discord.ui.Button(label="Add Project")
-        del_project_button = discord.ui.Button(label="Delete Project")
-        view.add_item(add_project_button)
-        view.add_item(del_project_button)
+        view = ProjectButtonView()
 
         await ctx.send(content=content,view=view,delete_after=300)
-
 
     bot.run(TOKEN)
