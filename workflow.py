@@ -12,7 +12,7 @@ class Workflow():
 
     def __init__(self) -> None:
         # Storing projects in dictionary.
-        self.projects = [Project('Test','00:00:00 07-01-2024')]
+        self.projects = [Project('Test','07 01 2024')]
 
     # Create new project with title and deadline.
     def add_project(self, title, deadline) -> None:
@@ -135,7 +135,7 @@ class NotEnoughParametersError(Exception):
 # Converting string input to datetime object.
 def convert_deadline(deadline_input):
     try:
-        deadline = datetime.strptime(deadline_input, "%H:%M:%S %d-%m-%Y")
+        deadline = datetime.strptime(deadline_input, "%d %m %Y")
     except:
         raise DatetimeConversionError
 
