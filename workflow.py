@@ -29,6 +29,14 @@ class Workflow():
         project.title = new_title
         project.deadline = convert_deadline(new_deadline)
 
+    # Get project titles.
+    def get_project_titles(self):
+        project_titles = []
+        for project in self.projects:
+            project_titles.append(project.title)
+        return project_titles
+
+
 
 class Project():
 
@@ -37,9 +45,28 @@ class Project():
         self.title = title
         self.deadline = convert_deadline(deadline)
 
+    # Add task.
+    def add_task(self,name,deadline) -> None:
+        task = Task(name,deadline)
+        self.tasks.append(task)
+
+    # Delete task
+    def del_task(self,number) -> None:
+        del self.tasks[number-1]
 
     def get_unix_deadline(self) -> int:
         return round(self.deadline.timestamp())
+
+
+class Task():
+
+    def __init__(self,name,deadline) -> None:
+        self.name = name
+        self.deadline = convert_deadline(deadline)
+    
+    def get_unix_deadline(self) -> int:
+        return round(self.deadline.timestamp())
+
 
 
 class DatetimeConversionError(Exception):

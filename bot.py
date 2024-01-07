@@ -59,30 +59,74 @@ class DelProjectModal(discord.ui.Modal,title="Delete Project"):
         await interaction.response.defer()
 
 
+class AddTaskModal(discord.ui.Modal,title="Add Task"):
+
+    def __init__(self,workflow):
+        super().__init__()
+        self.workflow = workflow
+
+    # Getting task details.
+    number_input = discord.ui.TextInput(label="Please enter a project number:",style=discord.TextStyle.short,placeholder="Number",required=True,max_length=2)
+    task_input = discord.ui.TextInput(label="Please enter a task name:",style=discord.TextStyle.short,placeholder="Name",required=True,max_length=100)
+    date_input =  discord.ui.TextInput(label="Please enter a task deadline (dd mm yyyy):",style=discord.TextStyle.short,placeholder="dd mm yyyy",required=False,max_length=10)
+
+    async def on_submit(self, interaction: discord.Interaction):
+        project = workflow.projects[int(self.number_input.value)-1]
+        project.add_task(self.task_input.value,self.date_input.value)
+        await interaction.response.defer()
+
+
+class DelTaskModal(discord.ui.Modal,title="Delete Task"):
+
+    def __init__(self,workflow):
+        super().__init__()
+        self.workflow = workflow
+
+    # Getting task number.
+    number_input = discord.ui.TextInput(label="Please enter a project number:",style=discord.TextStyle.short,placeholder="Project Number",required=True,max_length=2)
+    task_number = discord.ui.TextInput(label="Please enter a task number:",style=discord.TextStyle.short,placeholder="Task Number",required=True,max_length=2)
+
+    async def on_submit(self, interaction: discord.Interaction):
+        project = workflow.projects[int(self.number_input.value)-1]
+        project.del_task(int(self.task_number.value))
+        await interaction.response.defer()
+
+
 class ProjectButtonView(discord.ui.View):
 
     def __init__(self,workflow):
         super().__init__()
-        self.workflow = workflow 
+        self.workflow = workflow
 
 
-    @discord.ui.button(label="Add Project", style=discord.ButtonStyle.success)
+    @discord.ui.button(label="Add Project", style=discord.ButtonStyle.primary)
     async def add_project(self, interaction: discord.Interaction, button: discord.ui.Button):
         # Sending title response.
         await interaction.response.send_modal(AddProjectModal(workflow=workflow))
 
 
-    @discord.ui.button(label="Edit Project",style=discord.ButtonStyle.grey)
+    @discord.ui.button(label="Edit Project",style=discord.ButtonStyle.primary)
     async def edit_project(self, interaction: discord.Interaction, button: discord.ui.Button):
         # Sending edit response.
         await interaction.response.send_modal(EditProjectModal(workflow=workflow))
 
 
-    @discord.ui.button(label="Delete Project", style=discord.ButtonStyle.danger)
+    @discord.ui.button(label="Delete Project", style=discord.ButtonStyle.primary)
     async def del_project(self, interaction: discord.Interaction, button: discord.ui.Button):
         # Sending number response.
         await interaction.response.send_modal(DelProjectModal(workflow=workflow))
 
+
+    @discord.ui.button(label="Add Task", style=discord.ButtonStyle.secondary,row=2)
+    async def add_task(self, interaction: discord.Interaction, button: discord.ui.Button):
+        # Sending number response.
+        await interaction.response.send_modal(AddTaskModal(workflow=workflow))
+
+    
+    @discord.ui.button(label="Delete Task", style=discord.ButtonStyle.secondary,row=2)
+    async def del_task(self, interaction: discord.Interaction, button: discord.ui.Button):
+        # Sending number response.
+        await interaction.response.send_modal(DelTaskModal(workflow=workflow))
 
 
 class DisabledProjectButtonView(discord.ui.View):
@@ -92,22 +136,33 @@ class DisabledProjectButtonView(discord.ui.View):
         self.workflow = workflow 
 
 
-    @discord.ui.button(label="Add Project", style=discord.ButtonStyle.success)
+    @discord.ui.button(label="Add Project", style=discord.ButtonStyle.primary)
     async def add_project(self, interaction: discord.Interaction, button: discord.ui.Button):
         # Sending title response.
         await interaction.response.send_modal(AddProjectModal(workflow=workflow))
 
 
-    @discord.ui.button(label="Edit Project",style=discord.ButtonStyle.grey, disabled=True)
+    @discord.ui.button(label="Edit Project",style=discord.ButtonStyle.primary, disabled=True)
     async def edit_project(self, interaction: discord.Interaction, button: discord.ui.Button):
         # Sending edit response.
         await interaction.response.send_modal(EditProjectModal(workflow=workflow))
 
 
-    @discord.ui.button(label="Delete Project", style=discord.ButtonStyle.danger,disabled=True)
+    @discord.ui.button(label="Delete Project", style=discord.ButtonStyle.primary,disabled=True)
     async def del_project(self, interaction: discord.Interaction, button: discord.ui.Button):
         # Sending number response.
         await interaction.response.send_modal(DelProjectModal(workflow=workflow))
+
+    @discord.ui.button(label="Add Task", style=discord.ButtonStyle.secondary,row=2,disabled=True)
+    async def add_task(self, interaction: discord.Interaction, button: discord.ui.Button):
+        # Sending number response.
+        await interaction.response.send_modal(AddTaskModal(workflow=workflow))
+
+    
+    @discord.ui.button(label="Delete Task", style=discord.ButtonStyle.secondary,row=2,disabled=True)
+    async def del_task(self, interaction: discord.Interaction, button: discord.ui.Button):
+        # Sending number response.
+        await interaction.response.send_modal(DelTaskModal(workflow=workflow))
 
     
 
@@ -139,9 +194,18 @@ def run_discord_bot():
 
             if len(workflow.projects) != 0:
                 for project in workflow.projects:
+                    # Creating field title.
                     field_title = f'{workflow.projects.index(project)+1}. {project.title} - Deadline <t:{project.get_unix_deadline()}:R>' if project.deadline else \
                     f'{workflow.projects.index(project)+1}. {project.title}'
-                    embed.add_field(name=field_title,value="No tasks.",inline=False)
+                    # Creating task list for field.
+                    if len(project.tasks) != 0:
+                        task_list = ""
+                        for task in project.tasks:
+                            task_list += f'- {task.name} due <t:{task.get_unix_deadline()}:R>\n' if task.deadline else \
+                        f'- {task.name}\n'
+                    else:
+                        task_list = "No tasks."
+                    embed.add_field(name=field_title,value=task_list,inline=False)
             else:
                 embed.description = 'No existing projects.'
 
