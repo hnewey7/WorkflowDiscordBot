@@ -6,9 +6,41 @@ Created on Monday 1st January 2024
 
 '''
 
+from typing import Optional
 import discord
 import discord.ext.commands as commands
+from discord.interactions import Interaction
+from discord.utils import MISSING
 from workflow import Workflow, DatetimeConversionError
+
+
+class AddProjectModal(discord.ui.Modal,title="New Project"):
+
+    def __init__(self,workflow):
+        super().__init__()
+        self.workflow = workflow
+
+    # Getting inputs.
+    title_input = discord.ui.TextInput(label="Please enter a project title: ",style=discord.TextStyle.short,placeholder="Title",required=True,max_length=100)
+    date_input = discord.ui.TextInput(label="Please enter a deadline date:",style=discord.TextStyle.short,placeholder="dd-mm-yyyy",required=True,max_length=10)
+
+    async def on_submit(self, interaction: discord.Interaction):
+        self.workflow.add_project(self.title_input,"00:00:00 " + str(self.date_input))
+        await interaction.response.defer()
+
+
+class DelProjectModal(discord.ui.Modal,title="Delete Project"):
+
+    def __init__(self,workflow):
+        super().__init__()
+        self.workflow = workflow
+    
+    # Getting project number.
+    number_input = discord.ui.TextInput(label="Please enter a project number:",style=discord.TextStyle.short,placeholder="Number",required=True,max_length=2)
+
+    async def on_submit(self, interaction: discord.Interaction):
+        self.workflow.del_project(int(self.number_input.value))
+        await interaction.response.defer()
 
 
 class ProjectButtonView(discord.ui.View):
@@ -24,40 +56,8 @@ class ProjectButtonView(discord.ui.View):
         def check(message):
             return message.author == interaction.user and message.channel == interaction.channel
 
-        # Storing all messages.
-        message_objects = []
-
-        try:
-            # Sending title response.
-            await interaction.response.send_message("**Please enter a project title:**")
-            message_objects.append(await interaction.original_response())
-            title = await bot.wait_for('message', timeout=30, check=check)
-            message_objects.append(title)
-
-            # Sending deadline response.
-            deadline_prompt = await interaction.followup.send("**Please enter a deadline for the project (%H:%M:%S %d-%m-%Y):**")
-            message_objects.append(deadline_prompt)
-            deadline = await bot.wait_for('message', timeout=30, check=check)
-            message_objects.append(deadline)
-
-            while True:
-                try:
-                    # Adding project to workflow.
-                    self.workflow.add_project(title.content,deadline.content)
-                    break
-                except DatetimeConversionError:
-                    # Prompting user to input correct format.
-                    deadline_error = await interaction.followup.send("**Invalid deadline, please try again.**")
-                    message_objects.append(deadline_error)
-                    deadline_error_response = await bot.wait_for('message', timeout=30, check=check)
-                    deadline = deadline_error_response
-                    message_objects.append(deadline_error_response)
-        except TimeoutError:
-            pass
-        
-        # Deleting all messages.
-        for message in message_objects:
-            await message.delete()
+        # Sending title response.
+        await interaction.response.send_modal(AddProjectModal(workflow=workflow))
 
 
     @discord.ui.button(label="Delete Project", style=discord.ButtonStyle.danger)
@@ -66,35 +66,8 @@ class ProjectButtonView(discord.ui.View):
         def check(message):
             return message.author == interaction.user and message.channel == interaction.channel
 
-        # Storing all messages.
-        message_objects = []
-
-        try:
-             # Sending number response.
-            await interaction.response.send_message("**Please enter a project number: **")
-            message_objects.append(await interaction.original_response())
-            number = await bot.wait_for('message', timeout=30, check=check)
-            message_objects.append(number)
-
-            while True:
-                try:
-                    # Deleting projects from the workflow.
-                    self.workflow.del_project(int(number.content))
-                    break
-                except:
-                    # Prompting user to re-enter a valid project number
-                    error_message = await interaction.followup.send("**Invalid project number, please try again.**")
-                    message_objects.append(error_message)
-                    error_response = await bot.wait_for('message',timeout=30,check=check)
-                    number = error_response
-                    message_objects.append(error_response)
-
-        except TimeoutError:
-            pass
-
-        # Deleting all messages.
-        for message in message_objects:
-            await message.delete()
+        # Sending number response.
+        await interaction.response.send_modal(DelProjectModal(workflow=workflow))
 
 
 
@@ -120,7 +93,7 @@ def run_discord_bot():
 
         while True:
             # Creating embed for message.
-            embed = discord.Embed(color=discord.Color.yellow(),title="Existing Projects")
+            embed = discord.Embed(color=discord.Color.blurple(),title="Existing Projects")
 
             if len(workflow.projects) != 0:
                 for project in workflow.projects:
@@ -137,9 +110,9 @@ def run_discord_bot():
             if initial_check:
                 message = await ctx.send(embed=embed,view=view,delete_after=300)
                 initial_check = False
-                await bot.wait_for('message_delete')
+                await bot.wait_for('interaction')
             else:
                 await message.edit(embed=embed,view=view,delete_after=300)
-                await bot.wait_for('message_delete')
+                await bot.wait_for('interaction')
 
     bot.run(TOKEN)
