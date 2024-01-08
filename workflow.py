@@ -77,8 +77,12 @@ class DatetimeConversionError(Exception):
 # Converting string input to datetime object.
 def convert_deadline(deadline_input):
     try:
-        deadline = datetime.strptime(deadline_input, "%d %m %Y")
+        if deadline_input == None:
+            deadline = None
+        else:
+            deadline = datetime.strptime(deadline_input, "%d %m %Y")
     except:
+        print(deadline_input)
         raise DatetimeConversionError
 
     return deadline
