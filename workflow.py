@@ -54,6 +54,10 @@ class Project():
     def del_task(self,number) -> None:
         del self.tasks[number-1]
 
+    # Edit deadline.
+    def edit_deadline(self,deadline) -> None:
+        self.deadline = convert_deadline(deadline)
+
     def get_unix_deadline(self) -> int:
         return round(self.deadline.timestamp())
 
