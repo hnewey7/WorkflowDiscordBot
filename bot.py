@@ -74,7 +74,10 @@ class EditProjectModal(discord.ui.Modal,title="Edit Project"):
             else:
                 await interaction.edit_original_response(embed=embed,view=view)
                 await self.bot.wait_for('interaction')
-
+            # Checking to close the message.
+            if view.close_check:
+                await interaction.delete_original_response()
+                break
 
 
 
@@ -109,8 +112,9 @@ class AddTaskModal(discord.ui.Modal,title="Add Task"):
         # Checking if deadline entered.
         if self.deadline_input.value == "":
             self.project.add_task(self.task_input.value,None)
-        # Adding task to project.
-        self.project.add_task(self.task_input.value,self.deadline_input.value)
+        else:
+            # Adding task to project.
+            self.project.add_task(self.task_input.value,self.deadline_input.value)
         await interaction.response.defer()
 
 
@@ -229,6 +233,7 @@ class ProjectButtonView(discord.ui.View):
     def __init__(self, project):
         super().__init__()
         self.project = project
+        self.close_check = False
 
 
     @discord.ui.button(label="Change Title", style=discord.ButtonStyle.primary)
@@ -241,6 +246,12 @@ class ProjectButtonView(discord.ui.View):
     async def change_deadline(self, interaction: discord.Interaction, button: discord.ui.Button):
         # Sending edit deadline modal.
         await interaction.response.send_modal(EditDeadlineModal(project=self.project))
+
+    
+    @discord.ui.button(label="Finish Edit",style=discord.ButtonStyle.success)
+    async def finish_edit(self, interation: discord.Interaction, button: discord.ui.Button):
+        # Indicating to close message.
+        self.close_check = True
 
 
     @discord.ui.button(label="Add Task", style=discord.ButtonStyle.primary,row=2)
@@ -262,6 +273,7 @@ class DisabledProjectButtonView(discord.ui.View):
     def __init__(self, project):
         super().__init__()
         self.project = project
+        self.close_check = False
 
 
     @discord.ui.button(label="Change Title", style=discord.ButtonStyle.primary)
@@ -274,6 +286,12 @@ class DisabledProjectButtonView(discord.ui.View):
     async def change_deadline(self, interaction: discord.Interaction, button: discord.ui.Button):
         # Sending edit deadline modal.
         await interaction.response.send_modal(EditDeadlineModal(project=self.project))
+
+    
+    @discord.ui.button(label="Finish Edit",style=discord.ButtonStyle.success)
+    async def finish_edit(self, interation: discord.Interaction, button: discord.ui.Button):
+        # Indicating to close message.
+        self.close_check = True
 
 
     @discord.ui.button(label="Add Task", style=discord.ButtonStyle.primary,row=2)

@@ -86,7 +86,6 @@ def convert_deadline(deadline_input):
         else:
             deadline = datetime.strptime(deadline_input, "%d %m %Y")
     except:
-        print(deadline_input)
         raise DatetimeConversionError
 
     return deadline
