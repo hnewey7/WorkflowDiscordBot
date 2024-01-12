@@ -26,10 +26,17 @@ def init_events(client):
     async def on_guild_join(guild):
         print(f"Joined discord server ({guild.name}).")
         # Creating "Workflow" category.
-        await guild.create_category(name="Workflow",)
+        main_category = await guild.create_category(name="Workflow")
         print('Created category ("Workflow")')
-
-
+        # Creating default channels.
+        if "COMMUNITY" in guild.features:
+            deadlines_channel = await guild.create_forum("Deadline",topic="Displaying all current deadlines.",position=0)
+            stage_channel = await guild.create_stage_channel("Conclave", category=main_category,position=3)
+        chat_channel = await guild.create_text_channel("Discussion",category=main_category,topic="Chat dedicated to general workflow discussion.",position=1)
+        ideas_channel = await guild.create_text_channel("Ideas",category=main_category,topic="Chat dedicated to sharing potential ideas.",position=2)
+        voice_channel = await guild.create_voice_channel("Meeting Room", category=main_category,position=4)
+        print("Default channels created.")
+        
 # - - - - - - - - - - - - - - - - - - - - - - - 
 
 if __name__ == "__main__":
