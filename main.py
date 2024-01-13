@@ -15,22 +15,28 @@ from datetime import datetime
 def init_logging():
     # Creating log file name.
     start_time = datetime.now().strftime("%H-%M-%S_%d-%m-%Y")
-    log_file_name = "\\logs\\" + start_time + ".log"
+    log_file_name = "logs\\" + start_time + ".log"
     
     # Creating logger.
     global logger
-    logger = logging.getLogger(log_file_name)
-    logger.setLevel(logging.DEBUG)
+    logger = logging.getLogger()
+    logger.setLevel(logging.INFO)
 
     # Creating console handler.
     console_logger = logging.StreamHandler()
-    console_logger.setLevel(logging.DEBUG)
+    console_logger.setLevel(logging.INFO)
+
+    # Creating file handler.
+    file_logger = logging.FileHandler(log_file_name)
+    file_logger.setLevel(logging.INFO)
 
     # Creating formatter.
     formatter = logging.Formatter("%(asctime)s:%(levelname)s:   %(message)s","%Y-%m-%d %H:%M:%S")
+    file_logger.setFormatter(formatter)
     console_logger.setFormatter(formatter)
 
     # Adding to logger.
+    logger.addHandler(file_logger)
     logger.addHandler(console_logger)
 
     return logger
@@ -55,18 +61,9 @@ def init_events(client):
     async def on_guild_join(guild):
         logger.info(f"Joined discord server ({guild.name}).")
 
-        # Creating "Workflow" category.
-        main_category = await guild.create_category(name="Workflow")
-        logger.info('Created category ("Workflow")')
-
-        # Creating default channels.
-        if "COMMUNITY" in guild.features:
-            deadlines_channel = await guild.create_forum("Deadline",topic="Displaying all current deadlines.",position=0)
-            stage_channel = await guild.create_stage_channel("Conclave", category=main_category,position=3)
-        chat_channel = await guild.create_text_channel("Discussion",category=main_category,topic="Chat dedicated to general workflow discussion.",position=1)
-        ideas_channel = await guild.create_text_channel("Ideas",category=main_category,topic="Chat dedicated to sharing potential ideas.",position=2)
-        voice_channel = await guild.create_voice_channel("Meeting Room", category=main_category,position=4)
-        logger.info("Default channels created.")
+        # Creating "Workflow Manager" role.
+        await guild.create_role("Workflow Manager", color=discord.Color.teal, reason="Role for editting the workflow.")
+        logger.info("Workflow Manager role has been created.")
         
 # - - - - - - - - - - - - - - - - - - - - - - - 
 
@@ -79,7 +76,7 @@ if __name__ == "__main__":
     intents = discord.Intents.default()
     intents.message_content = True
     intents.guilds = True
-    
+
     # Initialising client.
     client = init_client(TOKEN)
 
