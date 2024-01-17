@@ -12,11 +12,11 @@ class Workflow():
 
     def __init__(self) -> None:
         # Storing projects in dictionary.
-        self.projects = [Project('Test','07 01 2024')]
+        self.projects = []
 
     # Create new project with title and deadline.
     def add_project(self, title, deadline) -> None:
-        new_project = Project(title, deadline)
+        new_project = Project(title, deadline, len(self.projects)+1)
         self.projects.append(new_project)
 
     # Remove project with number.
@@ -36,14 +36,20 @@ class Workflow():
             project_titles.append(project.title)
         return project_titles
 
+    # Get project from id.
+    def get_project_by_id(self, id):
+        for project in self.projects:
+            if project.id == id:
+                return project
 
 
 class Project():
 
-    def __init__(self,title,deadline) -> None:
+    def __init__(self,title,deadline,project_id) -> None:
         self.tasks = []
         self.title = title
         self.deadline = convert_deadline(deadline)
+        self.id = project_id
 
     # Add task.
     def add_task(self,name,deadline) -> None:
