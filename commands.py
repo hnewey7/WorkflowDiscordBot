@@ -319,7 +319,7 @@ def init_commands(logging):
 # Evaluating all discord commands.
 async def evaluate_command(command, client,workflow):
     if "set_projects_channel" == command.content[1:]:
-        await set_projects_channel_command(command)
+        await set_projects_channel_command(command, workflow, client)
     if "disconnect" == command.content[1:]:
         await disconnect_command(client)
     if "show_workflow" == command.content[1:]:
@@ -344,7 +344,7 @@ async def show_guild_command(command):
     print(command.guild.id)
 
 # Set projects command.
-async def set_projects_channel_command(command):
+async def set_projects_channel_command(command, workflow, client):
     # Getting channel and guild of command was sent in.
     channel = command.channel
     guild = command.guild
@@ -356,7 +356,7 @@ async def set_projects_channel_command(command):
 
     # Changing permissions for channel.
     await channel.set_permissions(command.guild.default_role,send_messages=False,add_reactions=False,manage_messages=False)
-    await channel.set_permissions(admin_role,send_messages=False,add_reactions=False,manage_messages=False)
+    await channel.set_permissions(admin_role,send_messages=True,add_reactions=False,manage_messages=True)
     logger.info(f"Setting {channel.name} to project channel in {command.guild.name}.")
 
     # Registering initial check.
@@ -367,7 +367,40 @@ async def set_projects_channel_command(command):
         # Creating embed for message.
         embed = discord.Embed(color=discord.Color.blurple(),title="Existing Projects")
 
+        # Creating content of message.
+        if len(workflow.projects) != 0:
+            for project in workflow.projects:
+                # Creating field title.
+                field_title = f'{workflow.projects.index(project)+1}. {project.title} - Deadline <t:{project.get_unix_deadline()}:R>' if project.deadline else \
+                f'{workflow.projects.index(project)+1}. {project.title}'
+                # Creating task list for field.
+                if len(project.tasks) != 0:
+                    task_list = ""
+                    for task in project.tasks:
+                        task_list += f'- {task.name} due <t:{task.get_unix_deadline()}:R>\n' if task.deadline else \
+                    f'- {task.name}\n'
+                else:
+                    task_list = "No tasks."
+                embed.add_field(name=field_title,value=task_list,inline=False)
+        else:
+            embed.description = 'No existing projects.'
 
+        '''
+        # Creating UI at bottom of message.
+        if len(workflow.projects) != 0:
+            view = WorkflowButtonView(workflow=workflow)
+        else:
+            view = DisabledWorkflowButtonView(workflow=workflow)
+        '''
+
+        # Updating message.
+        if initial_check:
+            message = await command.channel.send(embed=embed,delete_after=600)
+            initial_check = False
+            await client.wait_for('interaction')
+        else:
+            await message.edit(embed=embed,delete_after=600)
+            await client.wait_for('interaction')
 
     '''
     while

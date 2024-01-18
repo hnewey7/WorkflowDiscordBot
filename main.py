@@ -86,10 +86,15 @@ def init_events(client):
     async def on_guild_join(guild):
         logger.info("- - - - - - - - - - - - - - - - - - - - - -")
         logger.info(f"Joined discord server ({guild.name}).")
-
-        # Creating "Workflow Manager" role.
-        await guild.create_role(name="Workflow Manager", colour=discord.Colour.teal())
-        logger.info("Workflow Manager role has been created.")
+        
+        for role in await guild.fetch_roles():
+            if role.name == "Workflow Manager":
+                admin_role = role
+                break
+        else:
+            # Creating "Workflow Manager" role.
+            admin_role = await guild.create_role(name="Workflow Manager", colour=discord.Colour.teal())
+            logger.info("Workflow Manager role has been created.")
 
         # Creating workflow for guild.
         new_workflow = Workflow()
