@@ -53,7 +53,7 @@ class Project():
 
     # Add task.
     def add_task(self,name,deadline) -> None:
-        task = Task(name,deadline)
+        task = Task(name,deadline,len(self.tasks)+1)
         self.tasks.append(task)
 
     # Delete task
@@ -70,9 +70,10 @@ class Project():
 
 class Task():
 
-    def __init__(self,name,deadline) -> None:
+    def __init__(self,name,deadline,task_id) -> None:
         self.name = name
         self.deadline = convert_deadline(deadline)
+        self.id = task_id
     
     def get_unix_deadline(self) -> int:
         return round(self.deadline.timestamp())

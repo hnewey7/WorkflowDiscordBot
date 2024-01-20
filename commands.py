@@ -37,10 +37,10 @@ class AddProjectModal(discord.ui.Modal,title="New Project"):
 
 class EditProjectModal(discord.ui.Modal,title="Edit Project"):
 
-    def __init__(self,workflow,bot):
+    def __init__(self,workflow,client):
         super().__init__()
         self.workflow = workflow
-        self.bot = bot
+        self.client = client
 
     # Requires project number to edit.
     number_input = discord.ui.TextInput(label="Please enter a project number:",style=discord.TextStyle.short,placeholder="Number",required=True,max_length=2)
@@ -72,10 +72,10 @@ class EditProjectModal(discord.ui.Modal,title="Edit Project"):
             if initial_check:
                 await interaction.response.send_message(embed=embed,view=view,delete_after=600)
                 initial_check = False
-                await self.bot.wait_for('interaction')
+                await self.client.wait_for('interaction')
             else:
                 await interaction.edit_original_response(embed=embed,view=view)
-                await self.bot.wait_for('interaction')
+                await self.client.wait_for('interaction')
             # Checking to close the message.
             if view.close_check:
                 await interaction.delete_original_response()
@@ -177,10 +177,10 @@ class EditDeadlineModal(discord.ui.Modal, title="Edit Deadline"):
 
 class WorkflowButtonView(discord.ui.View):
 
-    def __init__(self,workflow,bot):
+    def __init__(self,workflow,client):
         super().__init__()
         self.workflow = workflow
-        self.bot = bot
+        self.client = client
 
 
     @discord.ui.button(label="Add Project", style=discord.ButtonStyle.primary)
@@ -192,7 +192,7 @@ class WorkflowButtonView(discord.ui.View):
     @discord.ui.button(label="Edit Project",style=discord.ButtonStyle.primary)
     async def edit_project(self, interaction: discord.Interaction, button: discord.ui.Button):
         # Sending edit project modal.
-        await interaction.response.send_modal(EditProjectModal(workflow=self.workflow,bot=self.bot))
+        await interaction.response.send_modal(EditProjectModal(workflow=self.workflow,client=self.client))
 
 
     @discord.ui.button(label="Delete Project", style=discord.ButtonStyle.primary)
@@ -205,9 +205,10 @@ class WorkflowButtonView(discord.ui.View):
 # Disabled verson of workflow view.
 class DisabledWorkflowButtonView(discord.ui.View):
 
-    def __init__(self,workflow):
+    def __init__(self,workflow,client):
         super().__init__()
         self.workflow = workflow 
+        self.client = client
     
 
     @discord.ui.button(label="Add Project", style=discord.ButtonStyle.primary)
@@ -219,7 +220,7 @@ class DisabledWorkflowButtonView(discord.ui.View):
     @discord.ui.button(label="Edit Project",style=discord.ButtonStyle.primary, disabled=True)
     async def edit_project(self, interaction: discord.Interaction, button: discord.ui.Button):
         # Sending edit project modal.
-        await interaction.response.send_modal(EditProjectModal(workflow=self.workflow))
+        await interaction.response.send_modal(EditProjectModal(workflow=self.workflow,client=self.client))
 
 
     @discord.ui.button(label="Delete Project", style=discord.ButtonStyle.primary,disabled=True)
@@ -385,65 +386,17 @@ async def set_projects_channel_command(command, workflow, client):
         else:
             embed.description = 'No existing projects.'
 
-        '''
         # Creating UI at bottom of message.
         if len(workflow.projects) != 0:
-            view = WorkflowButtonView(workflow=workflow)
+            view = WorkflowButtonView(workflow=workflow,client=client)
         else:
-            view = DisabledWorkflowButtonView(workflow=workflow)
-        '''
+            view = DisabledWorkflowButtonView(workflow=workflow,client=client)
 
         # Updating message.
         if initial_check:
-            message = await command.channel.send(embed=embed,delete_after=600)
+            message = await command.channel.send(embed=embed,view=view)
             initial_check = False
             await client.wait_for('interaction')
         else:
-            await message.edit(embed=embed,delete_after=600)
+            await message.edit(embed=embed,view=view)
             await client.wait_for('interaction')
-
-    '''
-    while
-    # Creating embed for message.
-    embed = discord.Embed(color=discord.Color.blurple(),title="Existing Projects")
-
-
-
-    initial_check = True
-
-    while True:
-        # Creating embed for message.
-        embed = discord.Embed(color=discord.Color.blurple(),title="Existing Projects")
-
-        # Creating content of message.
-        if len(workflow.projects) != 0:
-            for project in workflow.projects:
-                # Creating field title.
-                field_title = f'{workflow.projects.index(project)+1}. {project.title} - Deadline <t:{project.get_unix_deadline()}:R>' if project.deadline else \
-                f'{workflow.projects.index(project)+1}. {project.title}'
-                # Creating task list for field.
-                if len(project.tasks) != 0:
-                    task_list = ""
-                    for task in project.tasks:
-                        task_list += f'- {task.name} due <t:{task.get_unix_deadline()}:R>\n' if task.deadline else \
-                    f'- {task.name}\n'
-                else:
-                    task_list = "No tasks."
-                embed.add_field(name=field_title,value=task_list,inline=False)
-        else:
-            embed.description = 'No existing projects.'
-
-        # Creating UI at bottom of message.
-        if len(workflow.projects) != 0:
-            view = WorkflowButtonView(workflow=workflow,bot=bot)
-        else:
-            view = DisabledWorkflowButtonView(workflow=workflow)
-
-        # Updating message.
-        if initial_check:
-            message = await ctx.send(embed=embed,view=view,delete_after=600)
-            initial_check = False
-            await bot.wait_for('interaction')
-        else:
-            await message.edit(embed=embed,view=view,delete_after=600)
-            await bot.wait_for('interaction')'''

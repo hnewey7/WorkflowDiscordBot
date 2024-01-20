@@ -104,6 +104,15 @@ def init_events(client):
         workflows[guild.id] = new_workflow
         logger.info("Adding workflow to workflows dictionary.")
 
+    # On guild remove event.
+    @client.event
+    async def on_guild_remove(guild):
+        logger.info("- - - - - - - - - - - - - - - - - - - - - -")
+        logger.info(f"Removed discord server ({guild.name}).")
+
+        # Removing guild from workflow.
+        workflows.pop(guild.id)
+        logger.info("Removing guild from workflows dictionary.")
 
     # On message event.
     @client.event
@@ -140,7 +149,7 @@ def init_events(client):
 
                     # Adding task details.
                     individual_task['name'] = task.name
-                    individual_task['deadline'] = task.deadline.strftime("%d %m %Y")
+                    individual_task['deadline'] = task.deadline.strftime("%d %m %Y") if task.deadline else None
 
                     # Adding individual task to task dictionary.
                     task_dictionary[task.id] = individual_task
@@ -148,7 +157,7 @@ def init_events(client):
                 # Adding project details.
                 project_dictionary['tasks'] = task_dictionary
                 project_dictionary['name'] = project.title
-                project_dictionary['deadline'] = project.deadline.strftime("%d %m %Y")
+                project_dictionary['deadline'] = project.deadline.strftime("%d %m %Y") if project.deadline else None
 
                 # Adding project dictionary.
                 guild_dictionary[project.id] = project_dictionary
