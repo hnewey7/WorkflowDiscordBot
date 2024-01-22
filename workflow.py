@@ -13,6 +13,9 @@ class Workflow():
     def __init__(self) -> None:
         # Storing projects in dictionary.
         self.projects = []
+        # Active projects channel and message.
+        self.active_channel = None
+        self.active_message = None
 
     # Create new project with title and deadline.
     def add_project(self, title, deadline) -> None:

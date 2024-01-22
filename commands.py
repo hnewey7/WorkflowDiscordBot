@@ -29,7 +29,7 @@ class AddProjectModal(discord.ui.Modal,title="New Project"):
 
     async def on_submit(self, interaction: discord.Interaction):
         # Adds new project to workflow.
-        self.workflow.add_project(self.title_input.value,self.date_input.value)
+        self.workflow.add_project(self.title_input.value,self.deadline_input.value)
         await interaction.response.defer()
 
 
@@ -319,8 +319,8 @@ def init_commands(logging):
 
 # Evaluating all discord commands.
 async def evaluate_command(command, client,workflow):
-    if "set_projects_channel" == command.content[1:]:
-        await set_projects_channel_command(command, workflow, client)
+    if "set_active_channel" == command.content[1:]:
+        await set_active_channel_command(command, workflow, client)
     if "disconnect" == command.content[1:]:
         await disconnect_command(client)
     if "show_workflow" == command.content[1:]:
@@ -345,10 +345,16 @@ async def show_guild_command(command):
     print(command.guild.id)
 
 # Set projects command.
-async def set_projects_channel_command(command, workflow, client):
+async def set_active_channel_command(command, workflow, client):
+    # Deleting user message.
+    await command.delete()
+
     # Getting channel and guild of command was sent in.
     channel = command.channel
     guild = command.guild
+
+    # Updating projects channel in workflow.
+    workflow.active_channel = command.channel
 
     # Getting workflow manager role.
     for role in await guild.fetch_roles():
@@ -395,8 +401,46 @@ async def set_projects_channel_command(command, workflow, client):
         # Updating message.
         if initial_check:
             message = await command.channel.send(embed=embed,view=view)
+            workflow.active_message = message
             initial_check = False
             await client.wait_for('interaction')
         else:
             await message.edit(embed=embed,view=view)
             await client.wait_for('interaction')
+
+
+# - - - - - - - - - - - - - - - - - - - - - - - - - -
+            
+# Restarting message looping.
+async def restart_looping(client,workflow):
+    while True:
+        # Creating embed for message.
+        embed = discord.Embed(color=discord.Color.blurple(),title="Existing Projects")
+
+        # Creating content of message.
+        if len(workflow.projects) != 0:
+            for project in workflow.projects:
+                # Creating field title.
+                field_title = f'{workflow.projects.index(project)+1}. {project.title} - Deadline <t:{project.get_unix_deadline()}:R>' if project.deadline else \
+                f'{workflow.projects.index(project)+1}. {project.title}'
+                # Creating task list for field.
+                if len(project.tasks) != 0:
+                    task_list = ""
+                    for task in project.tasks:
+                        task_list += f'- {task.name} due <t:{task.get_unix_deadline()}:R>\n' if task.deadline else \
+                    f'- {task.name}\n'
+                else:
+                    task_list = "No tasks."
+                embed.add_field(name=field_title,value=task_list,inline=False)
+        else:
+            embed.description = 'No existing projects.'
+
+        # Creating UI at bottom of message.
+        if len(workflow.projects) != 0:
+            view = WorkflowButtonView(workflow=workflow,client=client)
+        else:
+            view = DisabledWorkflowButtonView(workflow=workflow,client=client)
+
+        # Updating message.
+        await workflow.active_message.edit(embed=embed,view=view)
+        await client.wait_for('interaction')

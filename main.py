@@ -16,19 +16,6 @@ from workflow import Workflow
 
 # - - - - - - - - - - - - - - - - - - - - - - - 
 
-def init_saved():
-    # Loading workflows dictionary.
-    global workflows
-
-    try:
-        # Loading json.
-        json_file = open('server_workflows.json',)
-        workflows_json = json.load(json_file)
-        workflows = convert_json(workflows_json)
-    except:
-        # Creating new dictionary.
-        workflows = {}
-
 def init_logging():
     # Creating log file name.
     start_time = datetime.now().strftime("%H-%M-%S_%d-%m-%Y")
@@ -63,13 +50,14 @@ def init_logging():
 
 
 def init_client(token):
+    logger.info("- - - - - - - - - - - - - - - - - - - - - -")
     # Initialising and running client.
     client = discord.Client(intents=intents)
 
     # Initialising events.
     init_events(client)
-    logger.info("- - - - - - - - - - - - - - - - - - - - - -")
     logger.info("Initialising events.")
+
     logger.info("Running client.")
     logger.info("- - - - - - - - - - - - - - - - - - - - - -")
     client.run(TOKEN,reconnect=True,log_handler=None)
@@ -80,6 +68,18 @@ def init_client(token):
 def init_events(client):
     global temp_client
     temp_client = client
+
+    # On connect event.
+    @client.event
+    async def on_connect():
+        # Initialising saved data.
+        logger.info("Initialising saved data.")
+        await init_saved(client)
+
+        # Initialising active message looping.
+        logger.info("Initialising message looping.")
+        await init_message_looping(client)
+        
 
     # On guild join event.
     @client.event
@@ -136,6 +136,13 @@ def init_events(client):
             # Creating dictionary to store guild details.
             guild_dictionary = {}
 
+            # Creating dictionary to store all projects.
+            projects_dictionary = {}
+
+            # Adding active channel name to dictionary.
+            guild_dictionary['active_channel'] = workflows[server_id].active_channel.id
+            guild_dictionary['active_message'] = workflows[server_id].active_message.id
+
             for project in workflows[server_id].projects:
                 # Creating project dictionary.
                 project_dictionary = {}
@@ -160,8 +167,11 @@ def init_events(client):
                 project_dictionary['deadline'] = project.deadline.strftime("%d %m %Y") if project.deadline else None
 
                 # Adding project dictionary.
-                guild_dictionary[project.id] = project_dictionary
+                projects_dictionary[project.id] = project_dictionary
             
+            # Adding projects dictionary.
+            guild_dictionary['projects'] = projects_dictionary
+
             # Adding guild dictionary
             workflows_json[server_id] = guild_dictionary
 
@@ -172,31 +182,55 @@ def init_events(client):
         logging.info("Disconnecting from client.")
         logger.info("- - - - - - - - - - - - - - - - - - - - - -")
 
+
+async def init_saved(client):
+    # Loading workflows dictionary.
+    global workflows
+
+    try:
+        # Loading json.
+        json_file = open('server_workflows.json',)
+        workflows_json = json.load(json_file)
+        workflows = await convert_json(workflows_json, client)
+    except:
+        # Creating new dictionary.
+        workflows = {}
+
+
+async def init_message_looping(client):
+    for guild_id in workflows.keys():
+        if workflows[guild_id].active_message:
+            await commands.restart_looping(client,workflows[guild_id])
+
 # - - - - - - - - - - - - - - - - - - - - - - - 
 
 # Converting json into workflows dictionary.    
-def convert_json(workflow_json):
+async def convert_json(workflow_json, client):
     # Creating workflow dictionary.
     workflows = {}
 
     for guild_id in workflow_json.keys():
         # Creating new workflow.
         workflow = Workflow()
+
+        # Setting active channel.
+        workflow.active_channel = await (await client.fetch_guild(guild_id)).fetch_channel(workflow_json[guild_id]['active_channel'])
+        workflow.active_message = await workflow.active_channel.fetch_message(workflow_json[guild_id]['active_message'])
         
         # Adding projects.
-        for project_id in workflow_json[guild_id].keys():
+        for project_id in workflow_json[guild_id]['projects'].keys():
             # Getting project details.
-            project_title = workflow_json[guild_id][project_id]['name']
-            project_deadline = workflow_json[guild_id][project_id]['deadline']
+            project_title = workflow_json[guild_id]['projects'][project_id]['name']
+            project_deadline = workflow_json[guild_id]['projects'][project_id]['deadline']
 
             # Adding project.
             workflow.add_project(project_title,project_deadline)
 
             # Adding tasks.
-            for task in workflow_json[guild_id][project_id]['tasks'].keys():
+            for task in workflow_json[guild_id]['projects'][project_id]['tasks'].keys():
                 # Getting task details.
-                task_name = workflow_json[guild_id][project_id]['tasks'][task].name
-                task_deadline = workflow_json[guild_id][project_id]['tasks'][task].deadline
+                task_name = workflow_json[guild_id]['projects'][project_id]['tasks'][task].name
+                task_deadline = workflow_json[guild_id]['projects'][project_id]['tasks'][task].deadline
 
                 # Adding task.
                 workflow.get_project_by_id(project_id).add_task(task_name,task_deadline)
@@ -211,9 +245,6 @@ def convert_json(workflow_json):
 if __name__ == "__main__":
 
     global client 
-
-    # Initialising saved data.
-    init_saved()
 
     # Initialising logging.
     init_logging()
