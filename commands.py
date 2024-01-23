@@ -11,7 +11,6 @@ import discord
 
 from datetime import datetime
 
-
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # MODAL CLASSES.
 
@@ -64,10 +63,7 @@ class EditProjectModal(discord.ui.Modal,title="Edit Project"):
             # Creating embed.
             embed = discord.Embed(color=discord.Color.blurple(),title=title,description=task_list)
             # Creating view.
-            if len(project.tasks) != 0:
-                view = ProjectButtonView(project=project)
-            else:
-                view = DisabledProjectButtonView(project=project)
+            view = ProjectButtonView(project=project) if len(project.tasks) != 0 else DisabledProjectButtonView(project=project)
             # Checking if initial message.
             if initial_check:
                 await interaction.response.send_message(embed=embed,view=view,delete_after=600)
@@ -183,94 +179,193 @@ class WorkflowButtonView(discord.ui.View):
         self.client = client
 
 
+    def get_admin_role(self,roles):
+        # Getting admin role.
+        for role in roles:
+            if role.name == "Workflow Manager":
+                return role
+
+
     @discord.ui.button(label="Add Project", style=discord.ButtonStyle.primary)
     async def add_project(self, interaction: discord.Interaction, button: discord.ui.Button):
-        # Sending add project modal.
-        await interaction.response.send_modal(AddProjectModal(workflow=self.workflow))
+        # Getting admin role.
+        admin_role = self.get_admin_role(interaction.guild.roles[:])
+        # Checking if user is admin role.
+        if admin_role in interaction.user.roles:
+            # Sending add project modal.
+            await interaction.response.send_modal(AddProjectModal(workflow=self.workflow))
+        else:
+            # Sending private message.
+            await interaction.user.send("You do not have the necessary role to add projects to the workflow.")
 
 
-    @discord.ui.button(label="Edit Project",style=discord.ButtonStyle.primary)
+    @discord.ui.button(label="Edit Project", style=discord.ButtonStyle.primary)
     async def edit_project(self, interaction: discord.Interaction, button: discord.ui.Button):
-        # Sending edit project modal.
-        await interaction.response.send_modal(EditProjectModal(workflow=self.workflow,client=self.client))
+        # Getting admin role.
+        admin_role = self.get_admin_role(interaction.guild.roles)
+        # Checking if user is admin role.
+        if admin_role in interaction.user.roles:
+            # Sending edit project modal.
+            await interaction.response.send_modal(EditProjectModal(workflow=self.workflow,client=self.client))
+        else:
+            # Sending private message.
+            await interaction.user.send("You do not have the necessary role to edit projects in the workflow.")
 
 
     @discord.ui.button(label="Delete Project", style=discord.ButtonStyle.primary)
     async def del_project(self, interaction: discord.Interaction, button: discord.ui.Button):
-        # Sending delete project modal.
-        await interaction.response.send_modal(DelProjectModal(workflow=self.workflow))
+        # Getting admin role.
+        admin_role = self.get_admin_role(interaction.guild.roles)
+        # Checking if user is admin role.
+        if admin_role in interaction.user.roles:
+            # Sending delete project modal.
+            await interaction.response.send_modal(DelProjectModal(workflow=self.workflow))
+        else:
+            # Sending private message.
+            await interaction.user.send("You do not have the necessary role to delete projects in the workflow.")
 
 
 
-# Disabled verson of workflow view.
+
 class DisabledWorkflowButtonView(discord.ui.View):
 
     def __init__(self,workflow,client):
         super().__init__()
-        self.workflow = workflow 
+        self.workflow = workflow
         self.client = client
-    
+
+
+    def get_admin_role(self,roles):
+        # Getting admin role.
+        for role in roles:
+            if role.name == "Workflow Manager":
+                return role
+
 
     @discord.ui.button(label="Add Project", style=discord.ButtonStyle.primary)
     async def add_project(self, interaction: discord.Interaction, button: discord.ui.Button):
-        # Sending add project modal.
-        await interaction.response.send_modal(AddProjectModal(workflow=self.workflow))
+        # Getting admin role.
+        admin_role = self.get_admin_role(interaction.guild.roles[:])
+        # Checking if user is admin role.
+        if admin_role in interaction.user.roles:
+            # Sending add project modal.
+            await interaction.response.send_modal(AddProjectModal(workflow=self.workflow))
+        else:
+            # Sending private message.
+            await interaction.user.send("You do not have the necessary role to add projects to the workflow.")
 
 
-    @discord.ui.button(label="Edit Project",style=discord.ButtonStyle.primary, disabled=True)
+    @discord.ui.button(label="Edit Project", style=discord.ButtonStyle.primary, disabled=True)
     async def edit_project(self, interaction: discord.Interaction, button: discord.ui.Button):
-        # Sending edit project modal.
-        await interaction.response.send_modal(EditProjectModal(workflow=self.workflow,client=self.client))
+        # Getting admin role.
+        admin_role = self.get_admin_role(interaction.guild.roles)
+        # Checking if user is admin role.
+        if admin_role in interaction.user.roles:
+            # Sending edit project modal.
+            await interaction.response.send_modal(EditProjectModal(workflow=self.workflow,client=self.client))
+        else:
+            # Sending private message.
+            await interaction.user.send("You do not have the necessary role to edit projects in the workflow.")
 
 
-    @discord.ui.button(label="Delete Project", style=discord.ButtonStyle.primary,disabled=True)
+    @discord.ui.button(label="Delete Project", style=discord.ButtonStyle.primary, disabled=True)
     async def del_project(self, interaction: discord.Interaction, button: discord.ui.Button):
-        # Sending delete project modal.
-        await interaction.response.send_modal(DelProjectModal(workflow=self.workflow))
+        # Getting admin role.
+        admin_role = self.get_admin_role(interaction.guild.roles)
+        # Checking if user is admin role.
+        if admin_role in interaction.user.roles:
+            # Sending delete project modal.
+            await interaction.response.send_modal(DelProjectModal(workflow=self.workflow))
+        else:
+            # Sending private message.
+            await interaction.user.send("You do not have the necessary role to delete projects in the workflow.")
 
 
-    
+
 
 class ProjectButtonView(discord.ui.View):
 
-    def __init__(self, project):
+    def __init__(self, project, disabled):
         super().__init__()
         self.project = project
         self.close_check = False
+        self.disabled = disabled
+
+
+    def get_admin_role(self,roles):
+        # Getting admin role.
+        for role in roles:
+            if role.name == "Workflow Manager":
+                return role
 
 
     @discord.ui.button(label="Change Title", style=discord.ButtonStyle.primary)
     async def change_title(self, interaction: discord.Interaction, button: discord.ui.Button):
-        # Sending edit title modal.
-        await interaction.response.send_modal(EditTitleModal(project=self.project))
+        # Getting admin role.
+        admin_role = self.get_admin_role(interaction.guild.roles)
+        # Checking if user is admin role.
+        if admin_role in interaction.user.roles:
+            # Sending edit title modal.
+            await interaction.response.send_modal(EditTitleModal(project=self.project))
+        else:
+            # Sending private message.
+            await interaction.user.send("You do not have the necessary role to the change title of a project.")
 
 
     @discord.ui.button(label="Change Deadline", style=discord.ButtonStyle.primary)
     async def change_deadline(self, interaction: discord.Interaction, button: discord.ui.Button):
-        # Sending edit deadline modal.
-        await interaction.response.send_modal(EditDeadlineModal(project=self.project))
+        # Getting admin role.
+        admin_role = self.get_admin_role(interaction.guild.roles)
+        # Checking if user is admin role.
+        if admin_role in interaction.user.roles:
+            # Sending edit deadline modal.
+            await interaction.response.send_modal(EditDeadlineModal(project=self.project))
+        else:
+            # Sending private message.
+            await interaction.user.send("You do not have the necessary role to the change deadline of a project.")
 
     
     @discord.ui.button(label="Finish Edit",style=discord.ButtonStyle.success)
-    async def finish_edit(self, interation: discord.Interaction, button: discord.ui.Button):
-        # Indicating to close message.
-        self.close_check = True
+    async def finish_edit(self, interaction: discord.Interaction, button: discord.ui.Button):
+        # Getting admin role.
+        admin_role = self.get_admin_role(interaction.guild.roles)
+        # Checking if user is admin role.
+        if admin_role in interaction.user.roles:
+            # Indicating to close message.
+            self.close_check = True
+        else:
+            # Sending private message.
+            await interaction.user.send("You do not have the necessary role to finish the edit on the project.")
 
 
     @discord.ui.button(label="Add Task", style=discord.ButtonStyle.primary,row=2)
     async def add_task(self, interaction: discord.Interaction, button: discord.ui.Button):
-        # Sending add task modal.
-        await interaction.response.send_modal(AddTaskModal(project=self.project))
-    
+        # Getting admin role.
+        admin_role = self.get_admin_role(interaction.guild.roles)
+        # Checking if user is admin role.
+        if admin_role in interaction.user.roles:
+            # Sending add task modal.
+            await interaction.response.send_modal(AddTaskModal(project=self.project))
+        else:
+            # Sending private message.
+            await interaction.user.send("You do not have the necessary role to add tasks to the project.")
+
 
     @discord.ui.button(label="Delete Task", style=discord.ButtonStyle.primary,row=2)
     async def del_task(self, interaction: discord.Interaction, button: discord.ui.Button):
-        # Sending delete task modal.
-        await interaction.response.send_modal(DelTaskModal(project=self.project))
+        # Getting admin role.
+        admin_role = self.get_admin_role(interaction.guild.roles)
+        # Checking if user is admin role.
+        if admin_role in interaction.user.roles:
+            # Sending delete task modal.
+            await interaction.response.send_modal(DelTaskModal(project=self.project))
+        else:
+            # Sending private message.
+            await interaction.user.send("You do not have the necessary role to delete tasks from the project.")
 
 
 
-# Disabled version of project view.
+
 class DisabledProjectButtonView(discord.ui.View):
 
     def __init__(self, project):
@@ -278,35 +373,76 @@ class DisabledProjectButtonView(discord.ui.View):
         self.project = project
         self.close_check = False
 
+    def get_admin_role(self,roles):
+            # Getting admin role.
+            for role in roles:
+                if role.name == "Workflow Manager":
+                    return role
+
 
     @discord.ui.button(label="Change Title", style=discord.ButtonStyle.primary)
     async def change_title(self, interaction: discord.Interaction, button: discord.ui.Button):
-        # Sending edit title modal.
-        await interaction.response.send_modal(EditTitleModal(project=self.project))
-    
+        # Getting admin role.
+        admin_role = self.get_admin_role(interaction.guild.roles)
+        # Checking if user is admin role.
+        if admin_role in interaction.user.roles:
+            # Sending edit title modal.
+            await interaction.response.send_modal(EditTitleModal(project=self.project))
+        else:
+            # Sending private message.
+            await interaction.user.send("You do not have the necessary role to the change title of a project.")
+
 
     @discord.ui.button(label="Change Deadline", style=discord.ButtonStyle.primary)
     async def change_deadline(self, interaction: discord.Interaction, button: discord.ui.Button):
-        # Sending edit deadline modal.
-        await interaction.response.send_modal(EditDeadlineModal(project=self.project))
+        # Getting admin role.
+        admin_role = self.get_admin_role(interaction.guild.roles)
+        # Checking if user is admin role.
+        if admin_role in interaction.user.roles:
+            # Sending edit deadline modal.
+            await interaction.response.send_modal(EditDeadlineModal(project=self.project))
+        else:
+            # Sending private message.
+            await interaction.user.send("You do not have the necessary role to the change deadline of a project.")
 
     
     @discord.ui.button(label="Finish Edit",style=discord.ButtonStyle.success)
-    async def finish_edit(self, interation: discord.Interaction, button: discord.ui.Button):
-        # Indicating to close message.
-        self.close_check = True
+    async def finish_edit(self, interaction: discord.Interaction, button: discord.ui.Button):
+        # Getting admin role.
+        admin_role = self.get_admin_role(interaction.guild.roles)
+        # Checking if user is admin role.
+        if admin_role in interaction.user.roles:
+            # Indicating to close message.
+            self.close_check = True
+        else:
+            # Sending private message.
+            await interaction.user.send("You do not have the necessary role to finish the edit on the project.")
 
 
     @discord.ui.button(label="Add Task", style=discord.ButtonStyle.primary,row=2)
     async def add_task(self, interaction: discord.Interaction, button: discord.ui.Button):
-        # Sending add task modal.
-        await interaction.response.send_modal(AddTaskModal(project=self.project))
-    
+        # Getting admin role.
+        admin_role = self.get_admin_role(interaction.guild.roles)
+        # Checking if user is admin role.
+        if admin_role in interaction.user.roles:
+            # Sending add task modal.
+            await interaction.response.send_modal(AddTaskModal(project=self.project))
+        else:
+            # Sending private message.
+            await interaction.user.send("You do not have the necessary role to add tasks to the project.")
+
 
     @discord.ui.button(label="Delete Task", style=discord.ButtonStyle.primary,disabled=True,row=2)
     async def del_task(self, interaction: discord.Interaction, button: discord.ui.Button):
-        # Sending delete task modal.
-        await interaction.response.send_modal(DelTaskModal(project=self.project))
+        # Getting admin role.
+        admin_role = self.get_admin_role(interaction.guild.roles)
+        # Checking if user is admin role.
+        if admin_role in interaction.user.roles:
+            # Sending delete task modal.
+            await interaction.response.send_modal(DelTaskModal(project=self.project))
+        else:
+            # Sending private message.
+            await interaction.user.send("You do not have the necessary role to delete tasks from the project.")
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - -
 
@@ -393,10 +529,7 @@ async def set_active_channel_command(command, workflow, client):
             embed.description = 'No existing projects.'
 
         # Creating UI at bottom of message.
-        if len(workflow.projects) != 0:
-            view = WorkflowButtonView(workflow=workflow,client=client)
-        else:
-            view = DisabledWorkflowButtonView(workflow=workflow,client=client)
+        view = WorkflowButtonView(workflow=workflow,client=client) if len(workflow.projects) != 0 else DisabledWorkflowButtonView(workflow=workflow,client=client)
 
         # Updating message.
         if initial_check:
@@ -436,10 +569,7 @@ async def restart_looping(client,workflow):
             embed.description = 'No existing projects.'
 
         # Creating UI at bottom of message.
-        if len(workflow.projects) != 0:
-            view = WorkflowButtonView(workflow=workflow,client=client)
-        else:
-            view = DisabledWorkflowButtonView(workflow=workflow,client=client)
+        view = WorkflowButtonView(workflow=workflow,client=client) if len(workflow.projects) != 0 else DisabledWorkflowButtonView(workflow=workflow,client=client)
 
         # Updating message.
         await workflow.active_message.edit(embed=embed,view=view)
