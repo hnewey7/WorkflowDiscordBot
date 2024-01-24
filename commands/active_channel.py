@@ -441,6 +441,13 @@ class DisabledProjectButtonView(discord.ui.View):
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - -
 
+# Init active_channel.
+def init_active_channel(logging):
+    # Initialising logger.
+    global logger
+    logger = logging
+
+
 # Set projects command.
 async def set_active_channel_command(command, workflow, client):
     # Deleting user message.

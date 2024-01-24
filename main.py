@@ -12,7 +12,7 @@ from datetime import datetime
 import json
 
 import commands
-from workflow import Workflow
+from workflow import Workflow, Project
 
 # - - - - - - - - - - - - - - - - - - - - - - - 
 
@@ -121,6 +121,7 @@ def init_events(client):
         logger.info(f"Message sent in {message.guild.name} {message.channel.name}.")
         if len(message.content) > 0 and message.content[0] == "!":
             logger.info(f"Command requested in {message.guild.name} {message.channel.name}.")
+            print(workflows)
             await commands.evaluate_command(message,temp_client,workflows[str(message.guild.id)])
 
     # On disconnect event.
@@ -186,15 +187,20 @@ def init_events(client):
 async def init_saved(client):
     # Loading workflows dictionary.
     global workflows
+    
+    load_check = False
 
     try:
         # Loading json.
         json_file = open('server_workflows.json',)
         workflows_json = json.load(json_file)
-        workflows = await convert_json(workflows_json, client)
+        load_check = True
     except:
         # Creating new dictionary.
         workflows = {}
+
+    if load_check:
+        workflows = await convert_json(workflows_json, client)
 
 
 async def init_message_looping(client):
@@ -214,8 +220,16 @@ async def convert_json(workflow_json, client):
         workflow = Workflow()
 
         # Setting active channel.
-        workflow.active_channel = await (await client.fetch_guild(guild_id)).fetch_channel(workflow_json[guild_id]['active_channel'])
-        workflow.active_message = await workflow.active_channel.fetch_message(workflow_json[guild_id]['active_message'])
+        try:
+            workflow.active_channel = await (await client.fetch_guild(guild_id)).fetch_channel(workflow_json[guild_id]['active_channel'])
+        except:
+            workflow.active_channel = None
+
+        # Setting active message
+        try:
+            workflow.active_message = await workflow.active_channel.fetch_message(workflow_json[guild_id]['active_message'])
+        except:
+            workflow.active_message = None
         
         # Adding projects.
         for project_id in workflow_json[guild_id]['projects'].keys():
@@ -229,10 +243,11 @@ async def convert_json(workflow_json, client):
             # Adding tasks.
             for task in workflow_json[guild_id]['projects'][project_id]['tasks'].keys():
                 # Getting task details.
-                task_name = workflow_json[guild_id]['projects'][project_id]['tasks'][task].name
-                task_deadline = workflow_json[guild_id]['projects'][project_id]['tasks'][task].deadline
+                task_name = workflow_json[guild_id]['projects'][project_id]['tasks'][task]['name']
+                task_deadline = workflow_json[guild_id]['projects'][project_id]['tasks'][task]['deadline']
 
                 # Adding task.
+
                 workflow.get_project_by_id(project_id).add_task(task_name,task_deadline)
     
         # Adding workflow to workflows.

@@ -8,7 +8,6 @@ Created on Wednesday 24th January 2024.
 
 # Disconnect command.
 async def disconnect_command(client):
-    logger.info("Requested disconnect from client.")
     await client.close()
 
 # Show workflow command.

@@ -40,9 +40,9 @@ class Workflow():
         return project_titles
 
     # Get project from id.
-    def get_project_by_id(self, id):
+    def get_project_by_id(self, id_number):
         for project in self.projects:
-            if project.id == id:
+            if int(project.id) == int(id_number):
                 return project
 
 
