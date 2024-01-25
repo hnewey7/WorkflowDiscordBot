@@ -121,7 +121,6 @@ def init_events(client):
         logger.info(f"Message sent in {message.guild.name} {message.channel.name}.")
         if len(message.content) > 0 and message.content[0] == "!":
             logger.info(f"Command requested in {message.guild.name} {message.channel.name}.")
-            print(workflows)
             await commands.evaluate_command(message,temp_client,workflows[str(message.guild.id)])
 
     # On disconnect event.
@@ -216,20 +215,25 @@ async def convert_json(workflow_json, client):
     workflows = {}
 
     for guild_id in workflow_json.keys():
+        logger.info(f"Loading data for guild, {guild_id}.")
         # Creating new workflow.
         workflow = Workflow()
 
         # Setting active channel.
         try:
             workflow.active_channel = await (await client.fetch_guild(guild_id)).fetch_channel(workflow_json[guild_id]['active_channel'])
+            logger.info("Active channel successfully fetched.")
         except:
             workflow.active_channel = None
+            logger.info("Active channel unsuccessfully fetched.")
 
         # Setting active message
         try:
             workflow.active_message = await workflow.active_channel.fetch_message(workflow_json[guild_id]['active_message'])
+            logger.info("Active message successfully fetched.")
         except:
             workflow.active_message = None
+            logger.info("Active message unsuccessfully fetched.")
         
         # Adding projects.
         for project_id in workflow_json[guild_id]['projects'].keys():
@@ -239,6 +243,7 @@ async def convert_json(workflow_json, client):
 
             # Adding project.
             workflow.add_project(project_title,project_deadline)
+            logger.info(f"Loading project, {project_title} ({project_deadline}).")
 
             # Adding tasks.
             for task in workflow_json[guild_id]['projects'][project_id]['tasks'].keys():
@@ -247,11 +252,15 @@ async def convert_json(workflow_json, client):
                 task_deadline = workflow_json[guild_id]['projects'][project_id]['tasks'][task]['deadline']
 
                 # Adding task.
-
                 workflow.get_project_by_id(project_id).add_task(task_name,task_deadline)
+                logger.info(f"Loading task, {task_name} ({task_deadline}).")
     
         # Adding workflow to workflows.
         workflows[guild_id] = workflow
+
+    logger.info("- - - - - - - - - - - - - - - - - - - - - -")
+    logger.info("Data loading finished.")
+    logger.info("- - - - - - - - - - - - - - - - - - - - - -")
 
     return workflows
 

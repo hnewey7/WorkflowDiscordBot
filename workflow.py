@@ -8,6 +8,8 @@ Created on Tuesday 2nd January 2024
 
 from datetime import datetime
 
+# - - - - - - - - - - - - - - - - - - - - - - - - - -
+
 class Workflow():
 
     def __init__(self) -> None:
@@ -16,6 +18,8 @@ class Workflow():
         # Active projects channel and message.
         self.active_channel = None
         self.active_message = None
+        # Storing teams.
+        self.teams = []
 
     # Create new project with title and deadline.
     def add_project(self, title, deadline) -> None:
@@ -44,6 +48,16 @@ class Workflow():
         for project in self.projects:
             if int(project.id) == int(id_number):
                 return project
+            
+    # Add team.
+    def add_team(self,title):
+        team = Team(title)
+        self.teams.append(team)
+        return team
+    
+    # Delete team.
+    def del_team(self,number):
+        return self.teams.pop(int(number)-1)
 
 
 class Project():
@@ -81,12 +95,22 @@ class Task():
     def get_unix_deadline(self) -> int:
         return round(self.deadline.timestamp())
 
+# - - - - - - - - - - - - - - - - - - - - - - - - - -
 
+class Team():
+
+    def __init__(self,title) -> None:
+        self.title = title
+        self.role_id = None
+        self.manager_ids = []
+
+# - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 class DatetimeConversionError(Exception):
     "Raised when deadline input cannot be converted to a datetime object."
     pass
 
+# - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 # Converting string input to datetime object.
 def convert_deadline(deadline_input):

@@ -9,161 +9,6 @@ Created on Wednesday 24th January 2024.
 import discord
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-# MODAL CLASSES.
-
-
-class AddProjectModal(discord.ui.Modal,title="New Project"):
-
-    def __init__(self,workflow):
-        super().__init__()
-        self.workflow = workflow
-
-    # Requires title and deadline for new project.
-    title_input = discord.ui.TextInput(label="Please enter a project title: ",style=discord.TextStyle.short,placeholder="Title",required=True,max_length=100)
-    deadline_input = discord.ui.TextInput(label="Please enter a deadline (dd mm yyyy):",style=discord.TextStyle.short,placeholder="dd mm yyyy",required=True,max_length=10)
-
-    async def on_submit(self, interaction: discord.Interaction):
-        # Adds new project to workflow.
-        self.workflow.add_project(self.title_input.value,self.deadline_input.value)
-        await interaction.response.defer()
-
-
-
-
-class EditProjectModal(discord.ui.Modal,title="Edit Project"):
-
-    def __init__(self,workflow,client):
-        super().__init__()
-        self.workflow = workflow
-        self.client = client
-
-    # Requires project number to edit.
-    number_input = discord.ui.TextInput(label="Please enter a project number:",style=discord.TextStyle.short,placeholder="Number",required=True,max_length=2)
-
-    async def on_submit(self, interaction: discord.Interaction):
-        initial_check = True
-
-        while True:
-            # Getting project.
-            project = self.workflow.projects[int(self.number_input.value)-1]
-            # Creating title.
-            title = f"{project.title} - Deadline <t:{project.get_unix_deadline()}:R>" if project.deadline else f"{project.title}"
-            # Creating task list.
-            if len(project.tasks) != 0:
-                task_list = ""
-                for task in project.tasks:
-                    task_list += f'{project.tasks.index(task)+1}. {task.name}, due <t:{task.get_unix_deadline()}:R>\n' if task.deadline else \
-                    f'{project.tasks.index(task)+1}. {task.name}\n'
-            else:
-                task_list = "No tasks."
-            # Creating embed.
-            embed = discord.Embed(color=discord.Color.blurple(),title=title,description=task_list)
-            # Creating view.
-            view = ProjectButtonView(project=project) if len(project.tasks) != 0 else DisabledProjectButtonView(project=project)
-            # Checking if initial message.
-            if initial_check:
-                await interaction.response.send_message(embed=embed,view=view,delete_after=600)
-                initial_check = False
-                await self.client.wait_for('interaction')
-            else:
-                await interaction.edit_original_response(embed=embed,view=view)
-                await self.client.wait_for('interaction')
-            # Checking to close the message.
-            if view.close_check:
-                await interaction.delete_original_response()
-                break
-
-
-
-class DelProjectModal(discord.ui.Modal,title="Delete Project"):
-
-    def __init__(self,workflow):
-        super().__init__()
-        self.workflow = workflow
-    
-    # Required project number to delete.
-    number_input = discord.ui.TextInput(label="Please enter a project number:",style=discord.TextStyle.short,placeholder="Number",required=True,max_length=2)
-
-    async def on_submit(self, interaction: discord.Interaction):
-        # Deleting project from workflow.
-        self.workflow.del_project(int(self.number_input.value))
-        await interaction.response.defer()
-
-
-
-
-class AddTaskModal(discord.ui.Modal,title="Add Task"):
-
-    def __init__(self,project):
-        super().__init__()
-        self.project = project
-
-    # Requires task name and deadline.
-    task_input = discord.ui.TextInput(label="Please enter a task name:",style=discord.TextStyle.short,placeholder="Name",required=True,max_length=100)
-    deadline_input =  discord.ui.TextInput(label="Please enter a task deadline (dd mm yyyy):",style=discord.TextStyle.short,placeholder="dd mm yyyy",required=False,max_length=10)
-
-    async def on_submit(self, interaction: discord.Interaction):
-        # Checking if deadline entered.
-        if self.deadline_input.value == "":
-            self.project.add_task(self.task_input.value,None)
-        else:
-            # Adding task to project.
-            self.project.add_task(self.task_input.value,self.deadline_input.value)
-        await interaction.response.defer()
-
-
-
-
-class DelTaskModal(discord.ui.Modal,title="Delete Task"):
-
-    def __init__(self,project):
-        super().__init__()
-        self.project = project
-
-    # Requires task number to delete.
-    number_input = discord.ui.TextInput(label="Please enter a project number:",style=discord.TextStyle.short,placeholder="Project Number",required=True,max_length=2)
-
-    async def on_submit(self, interaction: discord.Interaction):
-        # Deleting task from project.
-        self.project.del_task(int(self.task_number.value))
-        await interaction.response.defer()
-
-
-
-
-class EditTitleModal(discord.ui.Modal, title="Edit Title"):
-    
-    def __init__(self,project):
-        super().__init__()
-        self.project = project
-
-    # Required new title of project.
-    title_input = discord.ui.TextInput(label="Please enter a new project title:",style=discord.TextStyle.short,placeholder="Project Title",required=True,max_length=100)
-
-    async def on_submit(self, interaction: discord.Interaction):
-        # Changing title of project.
-        self.project.title = self.title_input.value
-        await interaction.response.defer()
-
-
-
-
-class EditDeadlineModal(discord.ui.Modal, title="Edit Deadline"):
-
-    def __init__(self,project):
-        super().__init__()
-        self.project = project
-
-    # Requires new deadline of project.
-    deadline_input = discord.ui.TextInput(label="Please enter a new project deadline:",style=discord.TextStyle.short,placeholder="dd mm yyyy",required=True,max_length=10)
-
-    async def on_submit(self, interaction: discord.Interaction):
-        # Changing deadline of project.
-        self.project.edit_deadline(self.deadline_input.value)
-        await interaction.response.defer()
-
-
-# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # VIEW CLASSES.
 
 
@@ -438,6 +283,160 @@ class DisabledProjectButtonView(discord.ui.View):
         else:
             # Sending private message.
             await interaction.user.send("You do not have the necessary role to delete tasks from the project.")
+
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+# MODAL CLASSES.
+
+
+class AddProjectModal(discord.ui.Modal,title="New Project"):
+
+    def __init__(self,workflow):
+        super().__init__()
+        self.workflow = workflow
+
+    # Requires title and deadline for new project.
+    title_input = discord.ui.TextInput(label="Please enter a project title: ",style=discord.TextStyle.short,placeholder="Title",required=True,max_length=100)
+    deadline_input = discord.ui.TextInput(label="Please enter a deadline (dd mm yyyy):",style=discord.TextStyle.short,placeholder="dd mm yyyy",required=True,max_length=10)
+
+    async def on_submit(self, interaction: discord.Interaction):
+        # Adds new project to workflow.
+        self.workflow.add_project(self.title_input.value,self.deadline_input.value)
+        await interaction.response.defer()
+
+
+
+
+class EditProjectModal(discord.ui.Modal,title="Edit Project"):
+
+    def __init__(self,workflow,client):
+        super().__init__()
+        self.workflow = workflow
+        self.client = client
+
+    # Requires project number to edit.
+    number_input = discord.ui.TextInput(label="Please enter a project number:",style=discord.TextStyle.short,placeholder="Number",required=True,max_length=2)
+
+    async def on_submit(self, interaction: discord.Interaction):
+        initial_check = True
+
+        while True:
+            # Getting project.
+            project = self.workflow.projects[int(self.number_input.value)-1]
+            # Creating title.
+            title = f"{project.title} - Deadline <t:{project.get_unix_deadline()}:R>" if project.deadline else f"{project.title}"
+            # Creating task list.
+            if len(project.tasks) != 0:
+                task_list = ""
+                for task in project.tasks:
+                    task_list += f'{project.tasks.index(task)+1}. {task.name}, due <t:{task.get_unix_deadline()}:R>\n' if task.deadline else \
+                    f'{project.tasks.index(task)+1}. {task.name}\n'
+            else:
+                task_list = "No tasks."
+            # Creating embed.
+            embed = discord.Embed(color=discord.Color.blurple(),title=title,description=task_list)
+            # Creating view.
+            view = ProjectButtonView(project=project) if len(project.tasks) != 0 else DisabledProjectButtonView(project=project)
+            # Checking if initial message.
+            if initial_check:
+                await interaction.response.send_message(embed=embed,view=view,delete_after=600)
+                initial_check = False
+                await self.client.wait_for('interaction')
+            else:
+                await interaction.edit_original_response(embed=embed,view=view)
+                await self.client.wait_for('interaction')
+            # Checking to close the message.
+            if view.close_check:
+                await interaction.delete_original_response()
+                break
+
+
+
+class DelProjectModal(discord.ui.Modal,title="Delete Project"):
+
+    def __init__(self,workflow):
+        super().__init__()
+        self.workflow = workflow
+    
+    # Required project number to delete.
+    number_input = discord.ui.TextInput(label="Please enter a project number:",style=discord.TextStyle.short,placeholder="Number",required=True,max_length=2)
+
+    async def on_submit(self, interaction: discord.Interaction):
+        # Deleting project from workflow.
+        self.workflow.del_project(int(self.number_input.value))
+        await interaction.response.defer()
+
+
+
+
+class AddTaskModal(discord.ui.Modal,title="Add Task"):
+
+    def __init__(self,project):
+        super().__init__()
+        self.project = project
+
+    # Requires task name and deadline.
+    task_input = discord.ui.TextInput(label="Please enter a task name:",style=discord.TextStyle.short,placeholder="Name",required=True,max_length=100)
+    deadline_input =  discord.ui.TextInput(label="Please enter a task deadline (dd mm yyyy):",style=discord.TextStyle.short,placeholder="dd mm yyyy",required=False,max_length=10)
+
+    async def on_submit(self, interaction: discord.Interaction):
+        # Checking if deadline entered.
+        if self.deadline_input.value == "":
+            self.project.add_task(self.task_input.value,None)
+        else:
+            # Adding task to project.
+            self.project.add_task(self.task_input.value,self.deadline_input.value)
+        await interaction.response.defer()
+
+
+
+
+class DelTaskModal(discord.ui.Modal,title="Delete Task"):
+
+    def __init__(self,project):
+        super().__init__()
+        self.project = project
+
+    # Requires task number to delete.
+    number_input = discord.ui.TextInput(label="Please enter a project number:",style=discord.TextStyle.short,placeholder="Project Number",required=True,max_length=2)
+
+    async def on_submit(self, interaction: discord.Interaction):
+        # Deleting task from project.
+        self.project.del_task(int(self.task_number.value))
+        await interaction.response.defer()
+
+
+
+
+class EditTitleModal(discord.ui.Modal, title="Edit Title"):
+    
+    def __init__(self,project):
+        super().__init__()
+        self.project = project
+
+    # Required new title of project.
+    title_input = discord.ui.TextInput(label="Please enter a new project title:",style=discord.TextStyle.short,placeholder="Project Title",required=True,max_length=100)
+
+    async def on_submit(self, interaction: discord.Interaction):
+        # Changing title of project.
+        self.project.title = self.title_input.value
+        await interaction.response.defer()
+
+
+
+
+class EditDeadlineModal(discord.ui.Modal, title="Edit Deadline"):
+
+    def __init__(self,project):
+        super().__init__()
+        self.project = project
+
+    # Requires new deadline of project.
+    deadline_input = discord.ui.TextInput(label="Please enter a new project deadline:",style=discord.TextStyle.short,placeholder="dd mm yyyy",required=True,max_length=10)
+
+    async def on_submit(self, interaction: discord.Interaction):
+        # Changing deadline of project.
+        self.project.edit_deadline(self.deadline_input.value)
+        await interaction.response.defer()
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - -
 

@@ -7,6 +7,7 @@ Created on Wednesday 24th January 2024.
 '''
 
 from .active_channel import set_active_channel_command, restart_looping, init_active_channel
+from .teams import display_teams    
 from .misc import disconnect_command, show_workflow_command, show_guild_command
 
 
@@ -35,3 +36,5 @@ async def evaluate_command(command, client, workflow):
         await show_guild_command(command)
     if "teams" == command.content[1:]:
         logger.info("Requesting teams.")
+        await display_teams(command,workflow,client)
+

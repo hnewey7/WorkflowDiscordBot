@@ -12,11 +12,9 @@ async def disconnect_command(client):
 
 # Show workflow command.
 async def show_workflow_command(workflow):
-    logger.info("Requested workflow display.")
     print(workflow.projects)
 
 # Show guild ids.
 async def show_guild_command(command):
-    logger.info("Requested guild id.")
     print(command.guild.id)
 
