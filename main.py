@@ -10,7 +10,6 @@ import discord
 import logging
 from datetime import datetime
 import json
-import asyncio
 
 import commands
 from workflow import Workflow, Project
@@ -278,6 +277,7 @@ if __name__ == "__main__":
     TOKEN = 'MTE5MTQ0NzQ5OTM4NzQzNzEwOA.GgSomy.bK3obSpCL8KdShCpJss8zyw3DOFcb5saIL785g'
     intents = discord.Intents.default()
     intents.message_content = True
+    intents.members = True
     intents.guilds = True
 
     # Initialising client.

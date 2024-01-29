@@ -210,10 +210,16 @@ async def display_teams(command, workflow, client):
             if initial_check:
                 message = await command.channel.send(embed=embed,view=view,delete_after=300)
                 initial_check = False
-                await client.wait_for('interaction')
+                # Waiting for either interaction or role update.
+                interaction_task = asyncio.create_task(client.wait_for('interaction'))
+                role_task = asyncio.create_task(client.wait_for('member_update'))
+                await asyncio.wait([interaction_task,role_task],return_when=asyncio.FIRST_COMPLETED)
             else:
+                # Waiting for either interaction or role update.
                 await message.edit(embed=embed,view=view,delete_after=300)
-                await client.wait_for('interaction')
+                interaction_task = asyncio.create_task(client.wait_for('interaction'))
+                role_task = asyncio.create_task(client.wait_for('member_update'))
+                await asyncio.wait([interaction_task,role_task],return_when=asyncio.FIRST_COMPLETED)
 
     else:
         logger.info("User does not have necessary permission.")
