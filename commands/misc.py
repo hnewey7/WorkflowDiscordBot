@@ -6,6 +6,8 @@ Created on Wednesday 24th January 2024.
 
 '''
 
+import logging
+
 # Disconnect command.
 async def disconnect_command(client):
     await client.close()
@@ -17,4 +19,11 @@ async def show_workflow_command(workflow):
 # Show guild ids.
 async def show_guild_command(command):
     print(command.guild.id)
+
+# Delete all roles.
+async def delete_roles_command(command):
+    for role in command.guild.roles:
+        if role.name != "Workflow Manager" and role.name != "WorkflowBot" and role.name != "@everyone":
+            await role.delete()
+            logging.info(f"Removing role, {role.name}")
 

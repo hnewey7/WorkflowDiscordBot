@@ -102,7 +102,7 @@ class Team():
     def __init__(self,title) -> None:
         self.title = title
         self.role_id = None
-        self.manager_ids = []
+        self.manager_role_id = None
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - -
 

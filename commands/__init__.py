@@ -8,7 +8,7 @@ Created on Wednesday 24th January 2024.
 
 from .active_channel import set_active_channel_command, restart_looping, init_active_channel
 from .teams import display_teams    
-from .misc import disconnect_command, show_workflow_command, show_guild_command
+from .misc import disconnect_command, show_workflow_command, show_guild_command, delete_roles_command
 
 
 # Initialising commands.
@@ -37,4 +37,7 @@ async def evaluate_command(command, client, workflow):
     if "teams" == command.content[1:]:
         logger.info("Requesting teams.")
         await display_teams(command,workflow,client)
+    if "delete_roles" == command.content[1:]:
+        logger.info("Requesting deleting all roles.")
+        await delete_roles_command(command)
 

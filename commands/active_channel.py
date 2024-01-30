@@ -210,6 +210,7 @@ class EditProjectModal(discord.ui.Modal,title="Edit Project"):
                 await interaction.edit_original_response(embed=embed,view=view)
                 await self.client.wait_for('interaction')
             # Checking to close the message.
+            print(view.close_check)
             if view.close_check:
                 await interaction.delete_original_response()
                 break
