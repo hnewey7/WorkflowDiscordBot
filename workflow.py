@@ -58,7 +58,19 @@ class Workflow():
     # Delete team.
     def del_team(self,number):
         return self.teams.pop(int(number)-1)
-
+    
+    # Get manager role ids.
+    def get_manager_role_ids(self):
+        manager_ids = []
+        for team in self.teams:
+            manager_ids.append(team.manager_role_id)
+        return manager_ids
+    
+    # Get team from manager id.
+    def get_team_from_manager_id(self,manager_id):
+        for team in self.teams:
+            if team.manager_role_id == manager_id:
+                return team
 
 class Project():
 

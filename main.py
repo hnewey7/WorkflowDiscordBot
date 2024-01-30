@@ -104,6 +104,37 @@ def init_events(client):
         workflows[guild.id] = new_workflow
         logger.info("Adding workflow to workflows dictionary.")
 
+    # On role update event.
+    @client.event
+    async def on_member_update(before, after):
+        logger.info("- - - - - - - - - - - - - - - - - - - - - -")
+        logging.info("Member's role updated event.")
+        # Getting workflow.
+        guild = after.guild
+        workflow = workflows[str(guild.id)]
+        # Getting list of manager role ids.
+        manager_ids = workflow.get_manager_role_ids()
+
+        # Getting new role.
+        for role in after.roles:
+            if role not in before.roles:
+                new_role = role
+        
+        # Check if manager role.
+        try:
+            if new_role.id in manager_ids:
+                logging.info(f"Manager role updated, {new_role.name}")
+                team = workflow.get_team_from_manager_id(new_role.id)
+                # Getting team role.
+                team_role = guild.get_role(team.role_id)
+
+                # Adding normal team role.
+                await after.add_roles(team_role)
+                await team_role.edit(reason="Trigger guild role event.")
+                logging.info(f"Adding member to standard team role, {team_role.name}")
+        except:
+            pass
+
     # On guild remove event.
     @client.event
     async def on_guild_remove(guild):

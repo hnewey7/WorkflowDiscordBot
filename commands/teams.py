@@ -159,13 +159,15 @@ class EditTeamModal(discord.ui.Modal,title="Edit Team"):
                 # Waiting for either interaction or role update.
                 interaction_task = asyncio.create_task(self.client.wait_for('interaction'))
                 role_task = asyncio.create_task(self.client.wait_for('member_update'))
-                await asyncio.wait([interaction_task,role_task],return_when=asyncio.FIRST_COMPLETED)
+                guild_task = asyncio.create_task(self.client.wait_for('guild_role_update'))
+                await asyncio.wait([interaction_task,role_task,guild_task],return_when=asyncio.FIRST_COMPLETED)
             else:
                 # Waiting for either interaction or role update.
                 await interaction.edit_original_response(embed=embed,view=view)
                 interaction_task = asyncio.create_task(self.client.wait_for('interaction'))
                 role_task = asyncio.create_task(self.client.wait_for('member_update'))
-                await asyncio.wait([interaction_task,role_task],return_when=asyncio.FIRST_COMPLETED)
+                guild_task = asyncio.create_task(self.client.wait_for('guild_role_update'))
+                await asyncio.wait([interaction_task,role_task,guild_task],return_when=asyncio.FIRST_COMPLETED)
 
             # Waiting to check whether to close edit.
             await asyncio.sleep(1)
