@@ -6,10 +6,11 @@ Created on Wednesday 24th January 2024.
 
 '''
 
-from typing import Optional
 import discord
 import logging
 import asyncio
+
+from .misc import get_admin_role
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - -
 
@@ -289,9 +290,3 @@ async def display_teams(command, workflow, client):
     else:
         logger.info("User does not have necessary permission.")
         command.author.send("You do not have the necessary role to use this command.")
-
-async def get_admin_role(guild):
-    # Getting workflow manager role.
-    for role in await guild.fetch_roles():
-        if role.name == "Workflow Manager":
-            return role

@@ -27,3 +27,11 @@ async def delete_roles_command(command):
             await role.delete()
             logging.info(f"Removing role, {role.name}")
 
+# - - - - - - - - - - - - - - - - - - -
+
+# Getting admin role. 
+async def get_admin_role(guild):
+    # Getting workflow manager role.
+    for role in await guild.fetch_roles():
+        if role.name == "Workflow Manager":
+            return role

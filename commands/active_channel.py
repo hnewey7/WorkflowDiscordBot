@@ -7,6 +7,9 @@ Created on Wednesday 24th January 2024.
 '''
 
 import discord
+import asyncio
+
+from .misc import get_admin_role
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # VIEW CLASSES.
@@ -20,17 +23,10 @@ class WorkflowButtonView(discord.ui.View):
         self.client = client
 
 
-    def get_admin_role(self,roles):
-        # Getting admin role.
-        for role in roles:
-            if role.name == "Workflow Manager":
-                return role
-
-
     @discord.ui.button(label="Add Project", style=discord.ButtonStyle.primary)
     async def add_project(self, interaction: discord.Interaction, button: discord.ui.Button):
         # Getting admin role.
-        admin_role = self.get_admin_role(interaction.guild.roles[:])
+        admin_role = await get_admin_role(interaction.guild)
         # Checking if user is admin role.
         if admin_role in interaction.user.roles:
             # Sending add project modal.
@@ -43,7 +39,7 @@ class WorkflowButtonView(discord.ui.View):
     @discord.ui.button(label="Edit Project", style=discord.ButtonStyle.primary)
     async def edit_project(self, interaction: discord.Interaction, button: discord.ui.Button):
         # Getting admin role.
-        admin_role = self.get_admin_role(interaction.guild.roles)
+        admin_role = await get_admin_role(interaction.guild)
         # Checking if user is admin role.
         if admin_role in interaction.user.roles:
             # Sending edit project modal.
@@ -56,7 +52,7 @@ class WorkflowButtonView(discord.ui.View):
     @discord.ui.button(label="Delete Project", style=discord.ButtonStyle.primary)
     async def del_project(self, interaction: discord.Interaction, button: discord.ui.Button):
         # Getting admin role.
-        admin_role = self.get_admin_role(interaction.guild.roles)
+        admin_role = await get_admin_role(interaction.guild)
         # Checking if user is admin role.
         if admin_role in interaction.user.roles:
             # Sending delete project modal.
@@ -75,17 +71,10 @@ class ProjectButtonView(discord.ui.View):
         self.close_check = False
 
 
-    def get_admin_role(self,roles):
-        # Getting admin role.
-        for role in roles:
-            if role.name == "Workflow Manager":
-                return role
-
-
     @discord.ui.button(label="Change Title", style=discord.ButtonStyle.primary)
     async def change_title(self, interaction: discord.Interaction, button: discord.ui.Button):
         # Getting admin role.
-        admin_role = self.get_admin_role(interaction.guild.roles)
+        admin_role = await get_admin_role(interaction.guild)
         # Checking if user is admin role.
         if admin_role in interaction.user.roles:
             # Sending edit title modal.
@@ -98,7 +87,7 @@ class ProjectButtonView(discord.ui.View):
     @discord.ui.button(label="Change Deadline", style=discord.ButtonStyle.primary)
     async def change_deadline(self, interaction: discord.Interaction, button: discord.ui.Button):
         # Getting admin role.
-        admin_role = self.get_admin_role(interaction.guild.roles)
+        admin_role = await get_admin_role(interaction.guild)
         # Checking if user is admin role.
         if admin_role in interaction.user.roles:
             # Sending edit deadline modal.
@@ -111,7 +100,7 @@ class ProjectButtonView(discord.ui.View):
     @discord.ui.button(label="Finish Edit",style=discord.ButtonStyle.success)
     async def finish_edit(self, interaction: discord.Interaction, button: discord.ui.Button):
         # Getting admin role.
-        admin_role = self.get_admin_role(interaction.guild.roles)
+        admin_role = await get_admin_role(interaction.guild)
         # Checking if user is admin role.
         if admin_role in interaction.user.roles:
             # Indicating to close message.
@@ -124,7 +113,7 @@ class ProjectButtonView(discord.ui.View):
     @discord.ui.button(label="Add Task", style=discord.ButtonStyle.primary,row=2)
     async def add_task(self, interaction: discord.Interaction, button: discord.ui.Button):
         # Getting admin role.
-        admin_role = self.get_admin_role(interaction.guild.roles)
+        admin_role = await get_admin_role(interaction.guild)
         # Checking if user is admin role.
         if admin_role in interaction.user.roles:
             # Sending add task modal.
@@ -137,7 +126,7 @@ class ProjectButtonView(discord.ui.View):
     @discord.ui.button(label="Delete Task", style=discord.ButtonStyle.primary,row=2)
     async def del_task(self, interaction: discord.Interaction, button: discord.ui.Button):
         # Getting admin role.
-        admin_role = self.get_admin_role(interaction.guild.roles)
+        admin_role = await get_admin_role(interaction.guild)
         # Checking if user is admin role.
         if admin_role in interaction.user.roles:
             # Sending delete task modal.
@@ -210,7 +199,7 @@ class EditProjectModal(discord.ui.Modal,title="Edit Project"):
                 await interaction.edit_original_response(embed=embed,view=view)
                 await self.client.wait_for('interaction')
             # Checking to close the message.
-            print(view.close_check)
+            await asyncio.sleep(1)
             if view.close_check:
                 await interaction.delete_original_response()
                 break
@@ -326,9 +315,7 @@ async def set_active_channel_command(command, workflow, client):
     workflow.active_channel = command.channel
 
     # Getting workflow manager role.
-    for role in await guild.fetch_roles():
-        if role.name == "Workflow Manager":
-            admin_role = role
+    admin_role = await get_admin_role(guild)
 
     # Changing permissions for channel.
     await channel.set_permissions(command.guild.default_role,send_messages=False,add_reactions=False,manage_messages=False)
