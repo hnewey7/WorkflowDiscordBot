@@ -50,8 +50,8 @@ class Workflow():
                 return project
             
     # Add team.
-    def add_team(self,title):
-        team = Team(title)
+    def add_team(self,title,role_id=None,manager_role_id=None):
+        team = Team(title,role_id=role_id,manager_role_id=manager_role_id)
         self.teams.append(team)
         return team
     
@@ -111,10 +111,10 @@ class Task():
 
 class Team():
 
-    def __init__(self,title) -> None:
+    def __init__(self,title,role_id:None,manager_role_id:None) -> None:
         self.title = title
-        self.role_id = None
-        self.manager_role_id = None
+        self.role_id = role_id
+        self.manager_role_id = manager_role_id
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - -
 

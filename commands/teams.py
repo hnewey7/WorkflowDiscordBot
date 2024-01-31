@@ -53,18 +53,19 @@ class TeamsButtonView(discord.ui.View):
 
 class IndividualTeamButtonView(discord.ui.View):
     
-    def __init__(self,workflow,team,role):
+    def __init__(self,workflow,team,role,manager_role):
         super().__init__()
         self.workflow = workflow
         self.team = team
         self.role = role
+        self.manager_role = manager_role
         self.close_check = False
 
     @discord.ui.button(label="Change Title", style=discord.ButtonStyle.primary)
     async def change_title(self, interaction: discord.Interaction, button: discord.ui.Button):
         if await get_admin_role(interaction.guild) in interaction.user.roles:
             # Sending add team modal.
-            await interaction.response.send_modal(ChangeTitleModal(self.workflow,self.team,self.role))
+            await interaction.response.send_modal(ChangeTitleModal(self.workflow,self.team,self.role,self.manager_role))
         else:
             # Sending private message.
             await interaction.user.send("You do not have the necessary role to change the title of the team.")
@@ -151,7 +152,7 @@ class EditTeamModal(discord.ui.Modal,title="Edit Team"):
             embed = discord.Embed(color=role.color,title=team.title,description=member_list)
 
             # Creating view for message.
-            view = IndividualTeamButtonView(self.workflow,team,role)
+            view = IndividualTeamButtonView(self.workflow,team,role,manager_role)
 
             if initial_check:
                 await interaction.response.send_message(embed=embed,view=view,delete_after=300)
@@ -200,11 +201,12 @@ class DelTeamModal(discord.ui.Modal,title="Delete Team"):
 
 class ChangeTitleModal(discord.ui.Modal,title="Change Title"):
     
-    def __init__(self,workflow,team,role):
+    def __init__(self,workflow,team,role,manager_role):
         super().__init__()
         self.workflow = workflow
         self.team = team
         self.role = role
+        self.manager_role = manager_role
     
     # Required title.
     title_input = discord.ui.TextInput(label="Please enter a new title:",style=discord.TextStyle.short,placeholder="Title",required=True,max_length=100)
@@ -214,6 +216,8 @@ class ChangeTitleModal(discord.ui.Modal,title="Change Title"):
         self.workflow.teams[self.workflow.teams.index(self.team)].title = self.title_input.value
         # Changing title of role.
         await self.role.edit(name=self.title_input.value)
+        await self.manager_role.edit(name=self.title_input.value + " Manager")
+
         logging.info("Changing title of role.")
         await interaction.response.defer()
 

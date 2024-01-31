@@ -170,9 +170,13 @@ def init_events(client):
             # Creating dictionary to store all projects.
             projects_dictionary = {}
 
+            # Creating dictionary to store all teams.
+            teams_dictionary = {}
+
             # Adding active channel name to dictionary.
             guild_dictionary['active_channel'] = workflows[server_id].active_channel.id
             guild_dictionary['active_message'] = workflows[server_id].active_message.id
+
 
             for project in workflows[server_id].projects:
                 # Creating project dictionary.
@@ -200,8 +204,22 @@ def init_events(client):
                 # Adding project dictionary.
                 projects_dictionary[project.id] = project_dictionary
             
-            # Adding projects dictionary.
+
+            for team in workflows[server_id].teams:
+                # Creating team dictionary.
+                team_dictionary = {}
+
+                # Adding team details.
+                team_dictionary['role_id'] = team.role_id
+                team_dictionary['manager_role_id'] = team.manager_role_id
+
+                # Adding team dictionary.
+                teams_dictionary[team.title] = team_dictionary
+
+
+            # Adding dictionaries to guild dictionary.
             guild_dictionary['projects'] = projects_dictionary
+            guild_dictionary['teams'] = teams_dictionary
 
             # Adding guild dictionary
             workflows_json[server_id] = guild_dictionary
@@ -285,7 +303,17 @@ async def convert_json(workflow_json, client):
                 # Adding task.
                 workflow.get_project_by_id(project_id).add_task(task_name,task_deadline)
                 logger.info(f"Loading task, {task_name} ({task_deadline}).")
-    
+        
+        # Adding teams.
+        for team_title in workflow_json[guild_id]['teams'].keys():
+            # Getting team details.
+            role_id = workflow_json[guild_id]['teams'][team_title]['role_id']
+            manager_role_id = workflow_json[guild_id]['teams'][team_title]['manager_role_id']
+
+            # Adding team.
+            workflow.add_team(team_title,role_id=role_id,manager_role_id=manager_role_id)
+            logger.info(f"Loading team, {team_title}.")
+
         # Adding workflow to workflows.
         workflows[guild_id] = workflow
 
