@@ -143,14 +143,14 @@ class EditTeamModal(discord.ui.Modal,title="Edit Team"):
             role = interaction.guild.get_role(team.role_id)
             manager_role = interaction.guild.get_role(team.manager_role_id)
             # Creating member list.
+            member_list = f"**{role.mention}**\n"
             if len(role.members) != 0:
-                member_list = ""
                 for index,member in enumerate(role.members):
                     member_list += f'{index+1}. {member.name}' if member not in manager_role.members else  f'{index+1}. {member.name} - **Manager**'
             else:
-                member_list = "No members."
+                member_list += "No members."
             # Creating embed for message.
-            embed = discord.Embed(color=role.color,title=team.title,description=member_list)
+            embed = discord.Embed(color=role.color,description=member_list)
 
             # Creating view for message.
             view = IndividualTeamButtonView(self.workflow,team,role,manager_role)
@@ -252,17 +252,15 @@ async def display_teams(command, workflow, client):
                             await asyncio.sleep(0.2)
                         else:
                             break
-                    # Creating field title.
-                    field_title = f'{workflow.teams.index(team)+1}. {team.title}'
                     # Creating task list for field.
+                    member_list = f"**{workflow.teams.index(team)+1}.{team_role.mention}**\n"
                     if len(team_role.members) != 0:
-                        member_list = ""
                         for member in team_role.members:
                             member_list += f'- {member.name} - **Manager**\n' if member in manager_role.members else \
                         f'- {member.name}\n'
                     else:
-                        member_list = "No members."
-                    embed.add_field(name=field_title,value=member_list,inline=False)
+                        member_list += "No members."
+                    embed.add_field(name="",value=member_list,inline=False)
             else:
                 embed.description = 'No existing teams.'
             
