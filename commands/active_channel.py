@@ -337,13 +337,17 @@ async def set_active_channel_command(command, workflow, client):
                 field_title = f'{workflow.projects.index(project)+1}. {project.title} - Deadline <t:{project.get_unix_deadline()}:R>' if project.deadline else \
                 f'{workflow.projects.index(project)+1}. {project.title}'
                 # Creating task list for field.
+                task_list = ""
+                for team in project.teams:
+                  task_list += f"{guild.get_role(team.role_id).mention} "
+                if len(project.teams) != 0:
+                  task_list += "\n"
                 if len(project.tasks) != 0:
-                    task_list = ""
                     for task in project.tasks:
                         task_list += f'- {task.name} due <t:{task.get_unix_deadline()}:R>\n' if task.deadline else \
                     f'- {task.name}\n'
                 else:
-                    task_list = "No tasks."
+                    task_list += "No tasks."
                 embed.add_field(name=field_title,value=task_list,inline=False)
         else:
             embed.description = 'No existing projects.'
@@ -378,8 +382,12 @@ async def restart_looping(client,workflow):
                 field_title = f'{workflow.projects.index(project)+1}. {project.title} - Deadline <t:{project.get_unix_deadline()}:R>' if project.deadline else \
                 f'{workflow.projects.index(project)+1}. {project.title}'
                 # Creating task list for field.
+                task_list = ""
+                for team in project.teams:
+                  task_list += f"{workflow.active_message.guild.get_role(team.role_id).mention} "
+                if len(project.teams) != 0:
+                  task_list += "\n"
                 if len(project.tasks) != 0:
-                    task_list = ""
                     for task in project.tasks:
                         task_list += f'- {task.name} due <t:{task.get_unix_deadline()}:R>\n' if task.deadline else \
                     f'- {task.name}\n'
