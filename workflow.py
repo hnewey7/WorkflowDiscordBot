@@ -66,11 +66,23 @@ class Workflow():
             manager_ids.append(team.manager_role_id)
         return manager_ids
     
+    # Get team from role id.
+    def get_team_from_role_id(self,role_id):
+        for team in self.teams:
+            if team.role_id == role_id:
+                return team
+
     # Get team from manager id.
     def get_team_from_manager_id(self,manager_id):
         for team in self.teams:
             if team.manager_role_id == manager_id:
                 return team
+            
+    # Get project from title.
+    def get_project_from_title(self,title):
+      for project in self.projects:
+       if project.title == title:
+          return project
 
 class Project():
 
@@ -115,6 +127,15 @@ class Team():
         self.title = title
         self.role_id = role_id
         self.manager_role_id = manager_role_id
+        self.projects = []
+
+    # Adding project to teams.
+    def add_project(self,project: Project):
+        self.projects.append(project)
+
+    # Deleting project to teams.
+    def del_project(self,project: Project):
+        self.projects.remove(project)
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - -
 
