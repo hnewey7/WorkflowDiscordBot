@@ -9,6 +9,9 @@ Created on Monday 1st January 2024
 import discord
 import logging
 from datetime import datetime
+import pathlib
+import logging.config
+import logging.handlers
 import json
 
 import commands
@@ -17,36 +20,19 @@ from workflow import Workflow, Project
 # - - - - - - - - - - - - - - - - - - - - - - - 
 
 def init_logging():
-    # Creating log file name.
-    start_time = datetime.now().strftime("%H-%M-%S_%d-%m-%Y")
-    log_file_name = "logs\\" + start_time + ".log"
-    
-    # Creating logger.
-    global logger
-    logger = logging.getLogger()
-    logger.setLevel(logging.INFO)
+  global logger
+  logger = logging.getLogger()
 
-    # Creating console handler.
-    console_logger = logging.StreamHandler()
-    console_logger.setLevel(logging.INFO)
+  # Setting up logger with config.
+  config_file = pathlib.Path("logging_config.json")
+  with open(config_file) as f_in:
+    config = json.load(f_in)
+  logging.config.dictConfig(config)
 
-    # Creating file handler.
-    file_logger = logging.FileHandler(log_file_name)
-    file_logger.setLevel(logging.INFO)
+  # Adding logger to commands.
+  commands.init_commands(logger)
 
-    # Creating formatter.
-    formatter = logging.Formatter("%(asctime)s:%(levelname)s:   %(message)s","%Y-%m-%d %H:%M:%S")
-    file_logger.setFormatter(formatter)
-    console_logger.setFormatter(formatter)
-
-    # Adding to logger.
-    logger.addHandler(file_logger)
-    logger.addHandler(console_logger)
-
-    # Adding logger to commands.
-    commands.init_commands(logger)
-
-    return logger
+  return logger
 
 
 def init_client(token):
