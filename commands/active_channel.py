@@ -177,13 +177,17 @@ class EditProjectModal(discord.ui.Modal,title="Edit Project"):
             # Creating title.
             title = f"{project.title} - Deadline <t:{project.get_unix_deadline()}:R>" if project.deadline else f"{project.title}"
             # Creating task list.
+            task_list = ""
+            for team in project.teams:
+              task_list += f"{self.workflow.active_message.guild.get_role(team.role_id).mention} "
+            if len(project.teams) != 0:
+              task_list += "\n"
             if len(project.tasks) != 0:
-                task_list = ""
                 for task in project.tasks:
                     task_list += f'{project.tasks.index(task)+1}. {task.name}, due <t:{task.get_unix_deadline()}:R>\n' if task.deadline else \
                     f'{project.tasks.index(task)+1}. {task.name}\n'
             else:
-                task_list = "No tasks."
+                task_list += "No tasks."
             # Creating embed.
             embed = discord.Embed(color=discord.Color.blurple(),title=title,description=task_list)
             # Creating view.
@@ -256,7 +260,7 @@ class DelTaskModal(discord.ui.Modal,title="Delete Task"):
 
     async def on_submit(self, interaction: discord.Interaction):
         # Deleting task from project.
-        self.project.del_task(int(self.task_number.value))
+        self.project.del_task(int(self.number_input.value))
         await interaction.response.defer()
 
 
@@ -392,7 +396,7 @@ async def restart_looping(client,workflow):
                         task_list += f'- {task.name} due <t:{task.get_unix_deadline()}:R>\n' if task.deadline else \
                     f'- {task.name}\n'
                 else:
-                    task_list = "No tasks."
+                    task_list += "No tasks."
                 embed.add_field(name=field_title,value=task_list,inline=False)
         else:
             embed.description = 'No existing projects.'

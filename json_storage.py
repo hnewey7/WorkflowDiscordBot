@@ -157,12 +157,12 @@ async def convert_json(workflow_json, client):
     # Loading teams to all projects.
     for project_id in workflow_json[guild_id]['projects'].keys():
       project = workflow.get_project_by_id(project_id)
-      project.load_teams(workflow_json[guild_id]['projects'][project_id]['teams'])
+      project.load_teams(workflow,workflow_json[guild_id]['projects'][project_id]['teams'])
 
     # Loading projects to all teams.
     for team_name in workflow_json[guild_id]['teams'].keys():
       team = workflow.get_team_from_name(team_name)
-      team.load_projects(workflow_json[guild_id]['teams'][team_name]['projects'])
+      team.load_projects(workflow,workflow_json[guild_id]['teams'][team_name]['projects'])
 
 
     # Adding workflow to workflows.

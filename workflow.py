@@ -184,7 +184,7 @@ class Team():
   # Load projects.
   def load_projects(self,workflow,project_ids):
     for project_id in project_ids:
-      project = workflow.get_project_from_id(project_id)
+      project = workflow.get_project_by_id(project_id)
       self.projects.append(project)
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - -

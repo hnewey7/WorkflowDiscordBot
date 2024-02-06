@@ -148,10 +148,10 @@ class ProjectSelectMenu(discord.ui.Select):
       project = self.workflow.get_project_from_title(project_title)
       if self.menu_type:
         self.team.add_project(project)
-        logger.info(f"Assigned {project.title} to {self.team.title}")
+        logger.info(f"Assigned {project.title} to {self.team.name}")
       else:
         self.team.del_project(project)
-        logger.info(f"Removed {project.title} from {self.team.title}")
+        logger.info(f"Removed {project.title} from {self.team.name}")
     await interaction.response.defer()
 
 
