@@ -12,101 +12,135 @@ from datetime import datetime
 
 class Workflow():
 
-    def __init__(self) -> None:
-        # Storing projects in dictionary.
-        self.projects = []
-        # Active projects channel and message.
-        self.active_channel = None
-        self.active_message = None
-        # Storing teams.
-        self.teams = []
+  def __init__(self) -> None:
+    # Storing projects in dictionary.
+    self.projects = []
+    # Active projects channel and message.
+    self.active_channel = None
+    self.active_message = None
+    # Storing teams.
+    self.teams = []
 
-    # Create new project with title and deadline.
-    def add_project(self, title, deadline) -> None:
-        new_project = Project(title, deadline, len(self.projects)+1)
-        self.projects.append(new_project)
+  #   -   -   -   -   -   -   -   -   -   -   -   -   -
+  # Project specific methods.
 
-    # Remove project with number.
-    def del_project(self, number) -> None:
-        del self.projects[number-1]
+  # Create new project with title and deadline.
+  def add_project(self, title, deadline) -> None:
+    new_project = Project(title, deadline, len(self.projects)+1)
+    self.projects.append(new_project)
+    return new_project
 
-    # Edit project with number.
-    def edit_project(self, number, new_title, new_deadline):
-        project = self.projects[number-1]
-        project.title = new_title
-        project.deadline = convert_deadline(new_deadline)
+  # Remove project with number.
+  def del_project(self, number) -> None:
+    del self.projects[number-1]
 
-    # Get project titles.
-    def get_project_titles(self):
-        project_titles = []
-        for project in self.projects:
-            project_titles.append(project.title)
-        return project_titles
+  # Edit project with number.
+  def edit_project(self, number, new_title, new_deadline):
+    project = self.projects[number-1]
+    project.title = new_title
+    project.deadline = convert_deadline(new_deadline)
 
-    # Get project from id.
-    def get_project_by_id(self, id_number):
-        for project in self.projects:
-            if int(project.id) == int(id_number):
-                return project
-            
-    # Add team.
-    def add_team(self,title,role_id=None,manager_role_id=None):
-        team = Team(title,role_id=role_id,manager_role_id=manager_role_id)
-        self.teams.append(team)
+  # Get project titles.
+  def get_project_titles(self):
+    project_titles = []
+    for project in self.projects:
+      project_titles.append(project.title)
+    return project_titles
+
+  # Get project from id.
+  def get_project_by_id(self, id_number):
+    for project in self.projects:
+      if int(project.id) == int(id_number):
+        return project
+  
+  # Get project from title.
+  def get_project_from_title(self,title):
+    for project in self.projects:
+      if project.title == title:
+        return project
+
+  #   -   -   -   -   -   -   -   -   -   -   -   -   -
+  # Team specific methods.
+
+  # Add team.
+  def add_team(self,title,role_id=None,manager_role_id=None):
+    team = Team(title,role_id=role_id,manager_role_id=manager_role_id,id=len(self.teams)+1)
+    self.teams.append(team)
+    return team
+
+  # Delete team.
+  def del_team(self,number):
+    return self.teams.pop(int(number)-1)
+  
+  # Get manager role ids.
+  def get_manager_role_ids(self):
+    manager_ids = []
+    for team in self.teams:
+      manager_ids.append(team.manager_role_id)
+    return manager_ids
+  
+  # Get team from role id.
+  def get_team_from_role_id(self,role_id):
+    for team in self.teams:
+      if team.role_id == role_id:
+        return team
+
+  # Get team from manager id.
+  def get_team_from_manager_id(self,manager_id):
+    for team in self.teams:
+      if team.manager_role_id == manager_id:
+        return team
+  
+  # Get team from id.
+  def get_team_from_id(self,id):
+    for team in self.teams:
+      if team.id == id:
+        return team
+      
+  # Get team from name.
+  def get_team_from_name(self,name):
+    for team in self.teams:
+      if team.name == name:
         return team
     
-    # Delete team.
-    def del_team(self,number):
-        return self.teams.pop(int(number)-1)
-    
-    # Get manager role ids.
-    def get_manager_role_ids(self):
-        manager_ids = []
-        for team in self.teams:
-            manager_ids.append(team.manager_role_id)
-        return manager_ids
-    
-    # Get team from role id.
-    def get_team_from_role_id(self,role_id):
-        for team in self.teams:
-            if team.role_id == role_id:
-                return team
-
-    # Get team from manager id.
-    def get_team_from_manager_id(self,manager_id):
-        for team in self.teams:
-            if team.manager_role_id == manager_id:
-                return team
-            
-    # Get project from title.
-    def get_project_from_title(self,title):
-      for project in self.projects:
-       if project.title == title:
-          return project
 
 class Project():
 
-    def __init__(self,title,deadline,project_id) -> None:
-        self.tasks = []
-        self.title = title
-        self.deadline = convert_deadline(deadline)
-        self.id = project_id
+  def __init__(self,title,deadline,project_id) -> None:
+    self.tasks = []
+    self.title = title
+    self.deadline = convert_deadline(deadline)
+    self.id = project_id
+    self.teams = []
 
-    # Add task.
-    def add_task(self,name,deadline) -> None:
-        task = Task(name,deadline,len(self.tasks)+1)
-        self.tasks.append(task)
+  # Add task.
+  def add_task(self,name,deadline) -> None:
+    task = Task(name,deadline,len(self.tasks)+1)
+    self.tasks.append(task)
 
-    # Delete task
-    def del_task(self,number) -> None:
-        del self.tasks[number-1]
+  # Delete task
+  def del_task(self,number) -> None:
+    del self.tasks[number-1]
 
-    # Edit deadline.
-    def edit_deadline(self,deadline) -> None:
-        self.deadline = convert_deadline(deadline)
+  # Edit deadline.
+  def edit_deadline(self,deadline) -> None:
+    self.deadline = convert_deadline(deadline)
 
-    def get_unix_deadline(self) -> int:
-        return round(self.deadline.timestamp())
+  def get_unix_deadline(self) -> int:
+    return round(self.deadline.timestamp())
+  
+  # Getting team ids.
+  def get_team_ids(self):
+    team_ids = []
+    for team in self.teams:
+      team_ids.append(team.id)
+    return team_ids
+  
+  # Loading teams.
+  def load_teams(self,workflow,team_ids):
+    for team_id in team_ids:
+      team = workflow.get_team_from_id(team_id)
+      self.teams.append(team)
 
 
 class Task():
@@ -123,19 +157,35 @@ class Task():
 
 class Team():
 
-    def __init__(self,title,role_id:None,manager_role_id:None) -> None:
-        self.title = title
-        self.role_id = role_id
-        self.manager_role_id = manager_role_id
-        self.projects = []
+  def __init__(self,name,role_id:None,manager_role_id:None,id) -> None:
+    self.name = name
+    self.role_id = role_id
+    self.manager_role_id = manager_role_id
+    self.projects = []
+    self.id = id
 
-    # Adding project to teams.
-    def add_project(self,project: Project):
-        self.projects.append(project)
+  # Adding project to teams.
+  def add_project(self,project: Project):
+    project.teams.append(self)
+    self.projects.append(project)
 
-    # Deleting project to teams.
-    def del_project(self,project: Project):
-        self.projects.remove(project)
+  # Deleting project to teams.
+  def del_project(self,project: Project):
+    project.teams.remove(self)
+    self.projects.remove(project)
+
+  # Getting project ids.
+  def get_project_ids(self):
+    project_ids = []
+    for project in self.projects:
+      project_ids.append(project.id)
+    return project_ids
+  
+  # Load projects.
+  def load_projects(self,workflow,project_ids):
+    for project_id in project_ids:
+      project = workflow.get_project_from_id(project_id)
+      self.projects.append(project)
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - -
 

@@ -57,7 +57,7 @@ class ManageProjectsView(discord.ui.View):
     initial_check = True
     while True:
       # Creating individual teams message.
-      embed = discord.Embed(color=standard_role.colour,title=team.title)
+      embed = discord.Embed(color=standard_role.colour,title=team.name)
       # Adding current projects to message.
       if len(team.projects) != 0:
         description = ""
