@@ -169,7 +169,7 @@ async def init_saved(client):
 async def init_message_looping(client):
     for guild_id in workflows.keys():
         if workflows[guild_id].active_message:
-            await commands.restart_looping(client,workflows[guild_id])
+            await commands.restart_looping(client,workflows[guild_id],await client.fetch_guild(guild_id))
 
 # - - - - - - - - - - - - - - - - - - - - - - - 
 

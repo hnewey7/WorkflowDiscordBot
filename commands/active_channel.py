@@ -184,8 +184,12 @@ class EditProjectModal(discord.ui.Modal,title="Edit Project"):
               task_list += "\n"
             if len(project.tasks) != 0:
                 for task in project.tasks:
-                    task_list += f'{project.tasks.index(task)+1}. {task.name}, due <t:{task.get_unix_deadline()}:R>\n' if task.deadline else \
-                    f'{project.tasks.index(task)+1}. {task.name}\n'
+                    task_members_mention = ""
+                    for member_id in task.member_ids:
+                        member = await self.workflow.active_message.guild.fetch_member(member_id)
+                        task_members_mention += member.mention 
+                    task_list += f'{project.tasks.index(task)+1}. {task.name}, due <t:{task.get_unix_deadline()}:R> {task_members_mention}\n' if task.deadline else \
+                    f'{project.tasks.index(task)+1}. {task.name} {task_members_mention}\n'
             else:
                 task_list += "No tasks."
             # Creating embed.
@@ -348,8 +352,12 @@ async def set_active_channel_command(command, workflow, client):
                   task_list += "\n"
                 if len(project.tasks) != 0:
                     for task in project.tasks:
-                        task_list += f'- {task.name} due <t:{task.get_unix_deadline()}:R>\n' if task.deadline else \
-                    f'- {task.name}\n'
+                        task_members_mention = ""
+                        for member_id in task.member_ids:
+                            member = await workflow.active_message.guild.fetch_member(member_id)
+                            task_members_mention += member.mention 
+                        task_list += f'- {task.name} due <t:{task.get_unix_deadline()}:R> {task_members_mention}\n' if task.deadline else \
+                    f'- {task.name} {task_members_mention}\n'
                 else:
                     task_list += "No tasks."
                 embed.add_field(name=field_title,value=task_list,inline=False)
@@ -374,7 +382,7 @@ async def set_active_channel_command(command, workflow, client):
 
            
 # Restarting message looping.
-async def restart_looping(client,workflow):
+async def restart_looping(client,workflow,guild):
     while True:
         # Creating embed for message.
         embed = discord.Embed(color=discord.Color.blurple(),title="Existing Projects")
@@ -393,8 +401,13 @@ async def restart_looping(client,workflow):
                   task_list += "\n"
                 if len(project.tasks) != 0:
                     for task in project.tasks:
-                        task_list += f'- {task.name} due <t:{task.get_unix_deadline()}:R>\n' if task.deadline else \
-                    f'- {task.name}\n'
+                        task_members_mention = ""
+                        if len(task.member_ids) != 0:
+                          for member_id in task.member_ids:
+                            member = await workflow.active_message.guild.fetch_member(member_id)
+                            task_members_mention += member.mention 
+                        task_list += f'- {task.name} due <t:{task.get_unix_deadline()}:R> {task_members_mention}\n' if task.deadline else \
+                    f'- {task.name} {task_members_mention}\n'
                 else:
                     task_list += "No tasks."
                 embed.add_field(name=field_title,value=task_list,inline=False)

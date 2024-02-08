@@ -101,7 +101,7 @@ class IndividualTeamView(discord.ui.View):
     # Creating select menu.
     available_projects = get_project_selection(self.workflow,self.team,menu_type)
     project_select = ProjectSelectMenu(self.workflow,self.team,menu_type)
-    project_select.placeholder = "Project"
+    project_select.placeholder = "Projects"
     project_select.max_values = len(available_projects)
     project_select.options = available_projects
     return project_select
