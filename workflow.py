@@ -117,6 +117,7 @@ class Project():
   def add_task(self,name,deadline) -> None:
     task = Task(name,deadline,len(self.tasks)+1,self)
     self.tasks.append(task)
+    return task
 
   # Delete task
   def del_task(self,number) -> None:

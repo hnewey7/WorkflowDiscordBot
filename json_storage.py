@@ -53,6 +53,7 @@ def save_to_json(workflows):
         # Adding task details.
         individual_task['name'] = task.name
         individual_task['deadline'] = task.deadline.strftime("%d %m %Y") if task.deadline else None
+        individual_task['member_ids'] = task.member_ids
 
         # Adding individual task to task dictionary.
         task_dictionary[task.id] = individual_task
@@ -139,7 +140,10 @@ async def convert_json(workflow_json, client):
         task_deadline = workflow_json[guild_id]['projects'][project_id]['tasks'][task]['deadline']
 
         # Adding task.
-        workflow.get_project_by_id(project_id).add_task(task_name,task_deadline)
+        new_task = workflow.get_project_by_id(project_id).add_task(task_name,task_deadline)
+
+        # Adding members to task.
+        new_task.member_ids = workflow_json[guild_id]['projects'][project_id]['tasks'][task]['member_ids']
         logger.info(f"Loading task, {task_name} ({task_deadline}).")
     
 
