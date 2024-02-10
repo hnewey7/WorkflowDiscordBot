@@ -47,16 +47,8 @@ def save_to_json(workflows):
       task_dictionary = {}
 
       for task in project.tasks:
-        # Creating individual task.
-        individual_task = {}
-
-        # Adding task details.
-        individual_task['name'] = task.name
-        individual_task['deadline'] = task.deadline.strftime("%d %m %Y") if task.deadline else None
-        individual_task['member_ids'] = task.member_ids
-
-        # Adding individual task to task dictionary.
-        task_dictionary[task.id] = individual_task
+        # Creating dictionary from task.
+        task_dictionary[task.id] = vars(task)
       
       # Adding project details.
       project_dictionary['tasks'] = task_dictionary
@@ -97,7 +89,7 @@ def save_to_json(workflows):
 
 
 # Converting json into workflows dictionary.    
-async def convert_json(workflow_json, client):
+async def convert_from_json(workflow_json, client):
   # Creating workflow dictionary.
   workflows = {}
 
@@ -142,8 +134,12 @@ async def convert_json(workflow_json, client):
         # Adding task.
         new_task = workflow.get_project_by_id(project_id).add_task(task_name,task_deadline)
 
-        # Adding members to task.
+        # Adding attributes to task.
         new_task.member_ids = workflow_json[guild_id]['projects'][project_id]['tasks'][task]['member_ids']
+        new_task.description = workflow_json[guild_id]['projects'][project_id]['tasks'][task]['description']
+        new_task.complete = workflow_json[guild_id]['projects'][project_id]['tasks'][task]['complete']
+        new_task.priority = workflow_json[guild_id]['projects'][project_id]['tasks'][task]['priority']
+
         logger.info(f"Loading task, {task_name} ({task_deadline}).")
     
 

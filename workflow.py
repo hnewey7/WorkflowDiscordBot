@@ -115,7 +115,7 @@ class Project():
 
   # Add task.
   def add_task(self,name,deadline) -> None:
-    task = Task(name,deadline,len(self.tasks)+1,self)
+    task = Task(name,deadline,len(self.tasks)+1,self.id)
     self.tasks.append(task)
     return task
 
@@ -146,12 +146,15 @@ class Project():
 
 class Task():
 
-    def __init__(self,name,deadline,task_id,project) -> None:
+    def __init__(self,name,deadline,task_id,project_id) -> None:
         self.name = name
         self.deadline = convert_deadline(deadline)
         self.id = task_id
-        self.project = project
+        self.project = project_id
         self.member_ids = []
+        self.description = None
+        self.complete = False
+        self.priority = None
     
     def assign_member(self,member):
       self.member_ids.append(member.id)
@@ -162,6 +165,15 @@ class Task():
         members.append(guild.get_member(member_id))
       return members
     
+    def change_description(self,description):
+      self.description = description
+
+    def complete_tasks(self):
+      self.complete = True
+
+    def change_priority(self,priority):
+      self.priority = priority
+
     def get_unix_deadline(self) -> int:
         return round(self.deadline.timestamp())
 

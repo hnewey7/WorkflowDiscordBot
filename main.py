@@ -15,8 +15,8 @@ import logging.handlers
 import json
 
 import commands
-from workflow import Workflow, Project
-from json_storage import save_to_json,convert_json
+from workflow import Workflow
+from json_storage import save_to_json,convert_from_json
 
 # - - - - - - - - - - - - - - - - - - - - - - - 
 
@@ -88,7 +88,7 @@ def init_events(client):
         logger.info("Creating new workflow for server.")
 
         # Adding workflow to dictionary.
-        workflows[guild.id] = new_workflow
+        workflows[str(guild.id)] = new_workflow
         logger.info("Adding workflow to workflows dictionary.")
 
     # On role update event.
@@ -163,7 +163,7 @@ async def init_saved(client):
         workflows = {}
 
     if load_check:
-        workflows = await convert_json(workflows_json, client)
+        workflows = await convert_from_json(workflows_json, client)
 
 
 async def init_message_looping(client):
