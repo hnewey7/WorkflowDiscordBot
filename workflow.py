@@ -168,8 +168,11 @@ class Task():
     def change_description(self,description):
       self.description = description
 
-    def complete_tasks(self):
-      self.complete = True
+    def change_status(self,status):
+      if status == "COMPLETED":
+        self.complete = True
+      else:
+        self.complete = False
 
     def change_priority(self,priority):
       self.priority = priority

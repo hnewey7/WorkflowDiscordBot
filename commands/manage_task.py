@@ -32,7 +32,7 @@ class TaskSelectMenu(discord.ui.Select):
 
   async def callback(self, interaction: discord.Interaction):
     async_tasks = []
-    async_tasks.append(asyncio.create_task(self.proceed_task()))
+    async_tasks.append(asyncio.create_task(self.proceed_task(interaction)))
     # Getting tasks from selected task.
     available_tasks = get_available_tasks(self.command,self.workflow)
     selected_tasks = []
@@ -43,11 +43,11 @@ class TaskSelectMenu(discord.ui.Select):
     # Creating tasks for each selected task.
     for task in selected_tasks:
       async_tasks.append(asyncio.create_task(self.send_task_message(task)))
-    await asyncio.wait(async_tasks,return_when=asyncio.FIRST_COMPLETED)
-    await interaction.response.defer()
+    await asyncio.wait(async_tasks,return_when=asyncio.ALL_COMPLETED)
+    await interaction.delete_original_response()
 
-  async def proceed_task(self):
-    pass
+  async def proceed_task(self,interaction:discord.Interaction):
+    await interaction.response.defer()
 
   async def send_task_message(self,task):
     initial_check = True
@@ -130,6 +130,13 @@ class IndividualTaskView(discord.ui.View):
     priority_select.max_values = 1
     priority_select.options = get_priority_selection()
     return priority_select
+  
+  def create_status_menu(self):
+    status_select = StatusSelectMenu(self.task)
+    status_select.placeholder = "Status"
+    status_select.max_values = 1
+    status_select.options = get_status_selection()
+    return status_select
 
   @discord.ui.button(label="Change Description",style=discord.ButtonStyle.primary)
   async def change_description(self,interaction:discord.Interaction,button:discord.ui.Button):
@@ -150,6 +157,22 @@ class IndividualTaskView(discord.ui.View):
     # Deleting message after interaction.
     await self.client.wait_for("interaction")
     await interaction.delete_original_response()
+
+  @discord.ui.button(label="Change Status",style=discord.ButtonStyle.primary)
+  async def change_status(self,interaction:discord.Interaction,button:discord.ui.Button):
+    # Sending message to change status.
+    view = discord.ui.View()
+    # Creating embed.
+    embed = discord.Embed(color=discord.Color.blurple(),description=f"Select a status for the task:")
+    # Creating select menu.
+    select_menu = self.create_status_menu()
+    view.add_item(select_menu)
+    # Sending message.
+    await interaction.response.send_message(embed=embed,view=view)
+    # Deleting message after interaction.
+    await self.client.wait_for("interaction")
+    await interaction.delete_original_response()
+
 
   @discord.ui.button(label="Finish Edit",style=discord.ButtonStyle.success)
   async def finish_edit(self,interaction:discord.Interaction,button:discord.Button):
@@ -215,6 +238,19 @@ class PrioritySelectMenu(discord.ui.Select):
     # Setting priority from selected value.
     self.task.change_priority(self.values[0])
     logger.info(f"Changed priority of ({self.task.name}) to {self.values}")
+    await interaction.response.defer()
+
+
+class StatusSelectMenu(discord.ui.Select):
+
+  def __init__(self,task):
+    super().__init__()
+    self.task = task
+  
+  async def callback(self, interaction: discord.Interaction):
+    # Setting status from selected value.
+    self.task.change_status(self.values[0])
+    logger.info(f"Changed status of ({self.task.name}) to {self.values[0]}.")
     await interaction.response.defer()
 
 # - - - - - - - - - - - - - - - - - - - - - -
@@ -296,6 +332,14 @@ def get_priority_selection():
   options = []
   for priority in priorities:
     option = discord.SelectOption(label=priority)
+    options.append(option)
+  return options
+
+def get_status_selection():
+  statuses = ["PENDING","COMPLETED"]
+  options = []
+  for status in statuses:
+    option = discord.SelectOption(label=status)
     options.append(option)
   return options
 
