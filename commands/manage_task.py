@@ -182,7 +182,7 @@ class IndividualTaskView(discord.ui.View):
   async def assign_member(self,interaction:discord.Interaction,button:discord.ui.Button):
     view = discord.ui.View()
     # Creating embed.
-    embed = discord.Embed(color=discord.Color.blurple(),description=f"Select a mamber to assign to the task:")
+    embed = discord.Embed(color=discord.Color.blurple(),description=f"Select a member to assign to the task:")
     # Creating select menu.
     select_menu = self.create_member_menu(True)
     view.add_item(select_menu)
@@ -196,7 +196,7 @@ class IndividualTaskView(discord.ui.View):
   async def remove_member(self,interaction:discord.Interaction,button:discord.Button):
     view = discord.ui.View()
     # Creating embed.
-    embed = discord.Embed(color=discord.Color.blurple(),description=f"Select a mamber to remove from the task:")
+    embed = discord.Embed(color=discord.Color.blurple(),description=f"Select a member to remove from the task:")
     # Creating select menu.
     select_menu = self.create_member_menu(False)
     view.add_item(select_menu)
@@ -282,7 +282,7 @@ def get_available_tasks(command,workflow):
   # Getting project ids from all teams.
   project_ids = []
   for team in teams:
-    for project in team.projects:
+    for project in team.get_projects_from_ids(workflow):
       if project.id not in project_ids:
         project_ids.append(project.id)
   # Getting projects from project ids.
@@ -309,7 +309,7 @@ def get_member_selection(task,workflow,guild,menu_type):
   # Getting members.
   member_selection = []
   if menu_type:
-    for team in workflow.get_project_by_id(task.project).teams:
+    for team in workflow.get_project_by_id(task.project).get_teams_from_ids(workflow):
       role = guild.get_role(team.role_id)
       for member in role.members:
         if member not in member_selection and member.id not in task.member_ids:
@@ -350,7 +350,7 @@ async def manage_tasks(command,client,workflow):
     logger.info("Command request approved.")
     channel = command.channel
     # Creating embed and view.
-    embed = discord.Embed(color=discord.Color.blurple(),description="Please select a task to manage their members:")
+    embed = discord.Embed(color=discord.Color.blurple(),description="Please select a task to manage:")
     view = discord.ui.View()
     # Creating select menu.
     task_select_menu = TaskSelectMenu(command,workflow,client)

@@ -13,13 +13,10 @@ from datetime import datetime
 class Workflow():
 
   def __init__(self) -> None:
-    # Storing projects in dictionary.
     self.projects = []
-    # Active projects channel and message.
+    self.teams = []
     self.active_channel = None
     self.active_message = None
-    # Storing teams.
-    self.teams = []
 
   #   -   -   -   -   -   -   -   -   -   -   -   -   -
   # Project specific methods.
@@ -35,17 +32,17 @@ class Workflow():
     del self.projects[number-1]
 
   # Edit project with number.
-  def edit_project(self, number, new_title, new_deadline):
+  def edit_project(self, number, name, deadline):
     project = self.projects[number-1]
-    project.title = new_title
-    project.deadline = convert_deadline(new_deadline)
+    project.name = name
+    project.deadline = convert_deadline(deadline)
 
-  # Get project titles.
-  def get_project_titles(self):
-    project_titles = []
+  # Get project names.
+  def get_project_names(self):
+    project_names = []
     for project in self.projects:
-      project_titles.append(project.title)
-    return project_titles
+      project_names.append(project.name)
+    return project_names
 
   # Get project from id.
   def get_project_by_id(self, id_number):
@@ -54,9 +51,9 @@ class Workflow():
         return project
   
   # Get project from title.
-  def get_project_from_title(self,title):
+  def get_project_from_name(self,name):
     for project in self.projects:
-      if project.title == title:
+      if project.name == name:
         return project
 
   #   -   -   -   -   -   -   -   -   -   -   -   -   -
@@ -106,12 +103,12 @@ class Workflow():
 
 class Project():
 
-  def __init__(self,title,deadline,project_id) -> None:
-    self.tasks = []
-    self.title = title
+  def __init__(self,name,deadline,id) -> None:
+    self.name = name
+    self.id = id
     self.deadline = convert_deadline(deadline)
-    self.id = project_id
-    self.teams = []
+    self.tasks = []
+    self.team_ids = []
 
   # Add task.
   def add_task(self,name,deadline) -> None:
@@ -127,29 +124,36 @@ class Project():
   def edit_deadline(self,deadline) -> None:
     self.deadline = convert_deadline(deadline)
 
+  # Getting deadline in unix.
   def get_unix_deadline(self) -> int:
-    return round(self.deadline.timestamp())
+    deadline = datetime(year=self.deadline['year'],month=self.deadline['month'],day=self.deadline['day'])
+    return round(deadline.timestamp())
   
-  # Getting team ids.
-  def get_team_ids(self):
-    team_ids = []
-    for team in self.teams:
-      team_ids.append(team.id)
-    return team_ids
-  
-  # Loading teams.
-  def load_teams(self,workflow,team_ids):
-    for team_id in team_ids:
+  # Adding team to project.
+  def add_team(self,team):
+    self.team_ids.append(team.id)
+    team.project_ids.append(self.id)
+
+  # Removing team from project.
+  def remove_team(self,team):
+    self.team_ids.remove(team.id)
+    team.project_ids.remove(self.id)
+
+  # Getting teams from ids.
+  def get_teams_from_ids(self,workflow):
+    teams = []
+    for team_id in self.team_ids:
       team = workflow.get_team_from_id(team_id)
-      self.teams.append(team)
+      teams.append(team)
+    return teams
 
 
 class Task():
 
     def __init__(self,name,deadline,task_id,project_id) -> None:
         self.name = name
-        self.deadline = convert_deadline(deadline)
         self.id = task_id
+        self.deadline = convert_deadline(deadline)
         self.project = project_id
         self.member_ids = []
         self.description = None
@@ -178,7 +182,8 @@ class Task():
       self.priority = priority
 
     def get_unix_deadline(self) -> int:
-        return round(self.deadline.timestamp())
+      deadline = datetime(year=self.deadline['year'],month=self.deadline['month'],day=self.deadline['day'])
+      return round(deadline.timestamp())
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - -
 
@@ -186,33 +191,28 @@ class Team():
 
   def __init__(self,name,role_id:None,manager_role_id:None,id) -> None:
     self.name = name
+    self.id = id
     self.role_id = role_id
     self.manager_role_id = manager_role_id
-    self.projects = []
-    self.id = id
+    self.project_ids = []
 
   # Adding project to teams.
   def add_project(self,project: Project):
-    project.teams.append(self)
-    self.projects.append(project)
+    project.team_ids.append(self.id)
+    self.project_ids.append(project.id)
 
   # Deleting project to teams.
   def del_project(self,project: Project):
-    project.teams.remove(self)
-    self.projects.remove(project)
+    project.team_ids.remove(self.id)
+    self.project_ids.remove(project.id)
 
-  # Getting project ids.
-  def get_project_ids(self):
-    project_ids = []
-    for project in self.projects:
-      project_ids.append(project.id)
-    return project_ids
-  
-  # Load projects.
-  def load_projects(self,workflow,project_ids):
-    for project_id in project_ids:
+  # Getting projects from ids..
+  def get_projects_from_ids(self,workflow):
+    projects = []
+    for project_id in self.project_ids:
       project = workflow.get_project_by_id(project_id)
-      self.projects.append(project)
+      projects.append(project)
+    return projects
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - -
 
@@ -229,6 +229,11 @@ def convert_deadline(deadline_input):
             deadline = None
         else:
             deadline = datetime.strptime(deadline_input, "%d %m %Y")
+            deadline = {
+              'day': deadline.day,
+              'month': deadline.month,
+              'year': deadline.year
+            }
     except:
         raise DatetimeConversionError
 

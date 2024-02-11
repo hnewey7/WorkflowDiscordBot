@@ -175,21 +175,24 @@ class EditProjectModal(discord.ui.Modal,title="Edit Project"):
             # Getting project.
             project = self.workflow.projects[int(self.number_input.value)-1]
             # Creating title.
-            title = f"{project.title} - Deadline <t:{project.get_unix_deadline()}:R>" if project.deadline else f"{project.title}"
+            title = f"{project.name} - Deadline <t:{project.get_unix_deadline()}:R>" if project.deadline else f"{project.name}"
             # Creating task list.
             task_list = ""
-            for team in project.teams:
+            for team in project.get_teams_from_ids(self.workflow):
               task_list += f"{self.workflow.active_message.guild.get_role(team.role_id).mention} "
-            if len(project.teams) != 0:
+            if len(project.get_teams_from_ids(self.workflow)) != 0:
               task_list += "\n"
             if len(project.tasks) != 0:
                 for task in project.tasks:
                     task_members_mention = ""
+                    task_status = ""
+                    if task.complete:
+                      task_status += "**`COMPLETED`**"
                     for member_id in task.member_ids:
                         member = await self.workflow.active_message.guild.fetch_member(member_id)
                         task_members_mention += member.mention 
-                    task_list += f'{project.tasks.index(task)+1}. {task.name}, due <t:{task.get_unix_deadline()}:R> {task_members_mention}\n' if task.deadline else \
-                    f'{project.tasks.index(task)+1}. {task.name} {task_members_mention}\n'
+                    task_list += f'{project.tasks.index(task)+1}. {task.name} Due <t:{task.get_unix_deadline()}:R> {task_members_mention}\n' if task.deadline else \
+                    f'{project.tasks.index(task)+1}. {task.name} {task_status} {task_members_mention}\n'
             else:
                 task_list += "No tasks."
             # Creating embed.
@@ -281,7 +284,7 @@ class EditTitleModal(discord.ui.Modal, title="Edit Title"):
 
     async def on_submit(self, interaction: discord.Interaction):
         # Changing title of project.
-        self.project.title = self.title_input.value
+        self.project.name = self.title_input.value
         await interaction.response.defer()
 
 
@@ -342,22 +345,25 @@ async def set_active_channel_command(command, workflow, client):
         if len(workflow.projects) != 0:
             for project in workflow.projects:
                 # Creating field title.
-                field_title = f'{workflow.projects.index(project)+1}. {project.title} - Deadline <t:{project.get_unix_deadline()}:R>' if project.deadline else \
-                f'{workflow.projects.index(project)+1}. {project.title}'
+                field_title = f'{workflow.projects.index(project)+1}. {project.name} - Deadline <t:{project.get_unix_deadline()}:R>' if project.deadline else \
+                f'{workflow.projects.index(project)+1}. {project.name}'
                 # Creating task list for field.
                 task_list = ""
-                for team in project.teams:
+                for team in project.get_teams_from_ids(workflow):
                   task_list += f"{guild.get_role(team.role_id).mention} "
-                if len(project.teams) != 0:
+                if len(project.get_teams_from_ids(workflow)) != 0:
                   task_list += "\n"
                 if len(project.tasks) != 0:
                     for task in project.tasks:
                         task_members_mention = ""
+                        task_status = ""
+                        if task.complete:
+                          task_status += "**`COMPLETED`**"
                         for member_id in task.member_ids:
                             member = await workflow.active_message.guild.fetch_member(member_id)
                             task_members_mention += member.mention 
-                        task_list += f'- {task.name} due <t:{task.get_unix_deadline()}:R> {task_members_mention}\n' if task.deadline else \
-                    f'- {task.name} {task_members_mention}\n'
+                        task_list += f'- {task.name} Due <t:{task.get_unix_deadline()}:R> {task_members_mention}\n' if task.deadline else \
+                    f'- {task.name} {task_status} {task_members_mention}\n'
                 else:
                     task_list += "No tasks."
                 embed.add_field(name=field_title,value=task_list,inline=False)
@@ -391,23 +397,26 @@ async def restart_looping(client,workflow,guild):
         if len(workflow.projects) != 0:
             for project in workflow.projects:
                 # Creating field title.
-                field_title = f'{workflow.projects.index(project)+1}. {project.title} - Deadline <t:{project.get_unix_deadline()}:R>' if project.deadline else \
-                f'{workflow.projects.index(project)+1}. {project.title}'
+                field_title = f'{workflow.projects.index(project)+1}. {project.name} - Deadline <t:{project.get_unix_deadline()}:R>' if project.deadline else \
+                f'{workflow.projects.index(project)+1}. {project.name}'
                 # Creating task list for field.
                 task_list = ""
-                for team in project.teams:
-                  task_list += f"{workflow.active_message.guild.get_role(team.role_id).mention} "
-                if len(project.teams) != 0:
+                for team in project.get_teams_from_ids(workflow):
+                  task_list += f"{guild.get_role(team.role_id).mention} "
+                if len(project.get_teams_from_ids(workflow)) != 0:
                   task_list += "\n"
                 if len(project.tasks) != 0:
                     for task in project.tasks:
                         task_members_mention = ""
+                        task_status = ""
+                        if task.complete:
+                          task_status += "**`COMPLETED`**"
                         if len(task.member_ids) != 0:
                           for member_id in task.member_ids:
                             member = await workflow.active_message.guild.fetch_member(member_id)
                             task_members_mention += member.mention 
-                        task_list += f'- {task.name} due <t:{task.get_unix_deadline()}:R> {task_members_mention}\n' if task.deadline else \
-                    f'- {task.name} {task_members_mention}\n'
+                        task_list += f'- {task.name} Due <t:{task.get_unix_deadline()}:R> {task_members_mention}\n' if task.deadline else \
+                    f'- {task.name} {task_status} {task_members_mention}\n'
                 else:
                     task_list += "No tasks."
                 embed.add_field(name=field_title,value=task_list,inline=False)

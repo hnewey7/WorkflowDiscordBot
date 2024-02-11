@@ -40,37 +40,18 @@ def save_to_json(workflows):
 
 
     for project in workflows[server_id].projects:
-      # Creating project dictionary.
-      project_dictionary = {}
-
-      # Creating task dictionary.
-      task_dictionary = {}
-
+      # Serializing tasks.
+      serialized_tasks = []
       for task in project.tasks:
-        # Creating dictionary from task.
-        task_dictionary[task.id] = vars(task)
-      
-      # Adding project details.
-      project_dictionary['tasks'] = task_dictionary
-      project_dictionary['name'] = project.title
-      project_dictionary['deadline'] = project.deadline.strftime("%d %m %Y") if project.deadline else None
-      project_dictionary['teams'] = project.get_team_ids()
-
+        serialized_tasks.append(vars(task))
+      project.tasks = serialized_tasks
       # Adding project dictionary.
-      projects_dictionary[project.id] = project_dictionary
+      projects_dictionary[project.id] = vars(project)
     
 
     for team in workflows[server_id].teams:
-      # Creating team dictionary.
-      team_dictionary = {}
-
-      # Adding team details.
-      team_dictionary['role_id'] = team.role_id
-      team_dictionary['manager_role_id'] = team.manager_role_id
-      team_dictionary['projects'] = team.get_project_ids()
-
       # Adding team dictionary.
-      teams_dictionary[team.name] = team_dictionary
+      teams_dictionary[team.name] = vars(team)
 
 
     # Adding dictionaries to guild dictionary.
@@ -120,25 +101,28 @@ async def convert_from_json(workflow_json, client):
       # Getting project details.
       project_title = workflow_json[guild_id]['projects'][project_id]['name']
       project_deadline = workflow_json[guild_id]['projects'][project_id]['deadline']
+      project_deadline = f"{project_deadline['day']} {project_deadline['month']} {project_deadline['year']}" if project_deadline else None
 
       # Adding project.
-      workflow.add_project(project_title,project_deadline)
+      project = workflow.add_project(project_title,project_deadline)
+      project.team_ids = workflow_json[guild_id]['projects'][project_id]['team_ids']
       logger.info(f"Loading project, {project_title} ({project_deadline}).")
 
       # Adding tasks.
-      for task in workflow_json[guild_id]['projects'][project_id]['tasks'].keys():
+      for task in workflow_json[guild_id]['projects'][project_id]['tasks']:
         # Getting task details.
-        task_name = workflow_json[guild_id]['projects'][project_id]['tasks'][task]['name']
-        task_deadline = workflow_json[guild_id]['projects'][project_id]['tasks'][task]['deadline']
+        task_name = task['name']
+        task_deadline = task['deadline']
+        task_deadline = f"{task_deadline['day']} {task_deadline['month']} {task_deadline['year']}" if task_deadline else None
 
         # Adding task.
         new_task = workflow.get_project_by_id(project_id).add_task(task_name,task_deadline)
 
         # Adding attributes to task.
-        new_task.member_ids = workflow_json[guild_id]['projects'][project_id]['tasks'][task]['member_ids']
-        new_task.description = workflow_json[guild_id]['projects'][project_id]['tasks'][task]['description']
-        new_task.complete = workflow_json[guild_id]['projects'][project_id]['tasks'][task]['complete']
-        new_task.priority = workflow_json[guild_id]['projects'][project_id]['tasks'][task]['priority']
+        new_task.member_ids = task['member_ids']
+        new_task.description = task['description']
+        new_task.complete = task['complete']
+        new_task.priority = task['priority']
 
         logger.info(f"Loading task, {task_name} ({task_deadline}).")
     
@@ -150,20 +134,9 @@ async def convert_from_json(workflow_json, client):
       manager_role_id = workflow_json[guild_id]['teams'][team_name]['manager_role_id']
 
       # Adding team.
-      workflow.add_team(team_name,role_id=role_id,manager_role_id=manager_role_id)
+      team = workflow.add_team(team_name,role_id=role_id,manager_role_id=manager_role_id)
+      team.project_ids = workflow_json[guild_id]['teams'][team_name]['project_ids']
       logger.info(f"Loading team, {team_name}.")
-
-
-    # Loading teams to all projects.
-    for project_id in workflow_json[guild_id]['projects'].keys():
-      project = workflow.get_project_by_id(project_id)
-      project.load_teams(workflow,workflow_json[guild_id]['projects'][project_id]['teams'])
-
-    # Loading projects to all teams.
-    for team_name in workflow_json[guild_id]['teams'].keys():
-      team = workflow.get_team_from_name(team_name)
-      team.load_projects(workflow,workflow_json[guild_id]['teams'][team_name]['projects'])
-
 
     # Adding workflow to workflows.
     workflows[guild_id] = workflow
