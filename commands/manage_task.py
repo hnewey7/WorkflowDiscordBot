@@ -66,7 +66,7 @@ class TaskSelectMenu(discord.ui.Select):
       # Creating individual teams message.
       embed = discord.Embed(color=discord.Color.blurple(),title=task.name,description=description)
       # Adding status to message.
-      status = "Completed" if task.complete else "Pending"
+      status = f"**`{task.status}`**"
       embed.add_field(name="Status:",value=status,inline=True)
       # Adding priority to message.
       if task.priority:
@@ -143,21 +143,6 @@ class IndividualTaskView(discord.ui.View):
     # Sending description modal.
     await interaction.response.send_modal(DescriptionModal(self.task))
 
-  @discord.ui.button(label="Change Priority",style=discord.ButtonStyle.primary)
-  async def change_priority(self,interaction:discord.Interaction,button:discord.ui.Button):
-    # Sending message to set priority.
-    view = discord.ui.View()
-    # Creating embed.
-    embed = discord.Embed(color=discord.Color.blurple(),description=f"Select a priority for the task:")
-    # Creating select menu.
-    select_menu = self.create_priority_menu()
-    view.add_item(select_menu)
-    # Sending message.
-    await interaction.response.send_message(embed=embed,view=view)
-    # Deleting message after interaction.
-    await self.client.wait_for("interaction")
-    await interaction.delete_original_response()
-
   @discord.ui.button(label="Change Status",style=discord.ButtonStyle.primary)
   async def change_status(self,interaction:discord.Interaction,button:discord.ui.Button):
     # Sending message to change status.
@@ -173,6 +158,20 @@ class IndividualTaskView(discord.ui.View):
     await self.client.wait_for("interaction")
     await interaction.delete_original_response()
 
+  @discord.ui.button(label="Change Priority",style=discord.ButtonStyle.primary)
+  async def change_priority(self,interaction:discord.Interaction,button:discord.ui.Button):
+    # Sending message to set priority.
+    view = discord.ui.View()
+    # Creating embed.
+    embed = discord.Embed(color=discord.Color.blurple(),description=f"Select a priority for the task:")
+    # Creating select menu.
+    select_menu = self.create_priority_menu()
+    view.add_item(select_menu)
+    # Sending message.
+    await interaction.response.send_message(embed=embed,view=view)
+    # Deleting message after interaction.
+    await self.client.wait_for("interaction")
+    await interaction.delete_original_response()
 
   @discord.ui.button(label="Finish Edit",style=discord.ButtonStyle.success)
   async def finish_edit(self,interaction:discord.Interaction,button:discord.Button):
@@ -292,7 +291,9 @@ def get_available_tasks(command,workflow):
   # Getting tasks from projects.
   available_tasks = []
   for project in projects:
-    available_tasks.extend(project.tasks)
+    for task in project.tasks:
+      if not task.archive:
+        available_tasks.append(task)
   return available_tasks
 
 def create_task_options(tasks):

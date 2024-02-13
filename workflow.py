@@ -109,6 +109,9 @@ class Project():
     self.deadline = convert_deadline(deadline)
     self.tasks = []
     self.team_ids = []
+    self.description = None
+    self.status = "PENDING"
+    self.priority = None
 
   # Add task.
   def add_task(self,name,deadline) -> None:
@@ -147,6 +150,16 @@ class Project():
       teams.append(team)
     return teams
 
+  def change_description(self,description):
+      self.description = description
+
+  def change_status(self,status):
+    self.status = status
+
+  def change_priority(self,priority):
+    self.priority = priority
+
+
 
 class Task():
 
@@ -157,8 +170,9 @@ class Task():
         self.project = project_id
         self.member_ids = []
         self.description = None
-        self.complete = False
+        self.status = "PENDING"
         self.priority = None
+        self.archive = False
     
     def assign_member(self,member):
       self.member_ids.append(member.id)
@@ -173,10 +187,7 @@ class Task():
       self.description = description
 
     def change_status(self,status):
-      if status == "COMPLETED":
-        self.complete = True
-      else:
-        self.complete = False
+      self.status = status
 
     def change_priority(self,priority):
       self.priority = priority

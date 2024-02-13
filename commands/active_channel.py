@@ -183,16 +183,19 @@ class EditProjectModal(discord.ui.Modal,title="Edit Project"):
             if len(project.get_teams_from_ids(self.workflow)) != 0:
               task_list += "\n"
             if len(project.tasks) != 0:
+                index = 0
                 for task in project.tasks:
+                  if not task.archive:
+                    index += 1
                     task_members_mention = ""
                     task_status = ""
-                    if task.complete:
-                      task_status += "**`COMPLETED`**"
+                    if task.status:
+                      task_status += f"**`{task.status}`**"
                     for member_id in task.member_ids:
                         member = await self.workflow.active_message.guild.fetch_member(member_id)
                         task_members_mention += member.mention 
-                    task_list += f'{project.tasks.index(task)+1}. {task.name} Due <t:{task.get_unix_deadline()}:R> {task_members_mention}\n' if task.deadline else \
-                    f'{project.tasks.index(task)+1}. {task.name} {task_status} {task_members_mention}\n'
+                    task_list += f'{index}. {task.name} Due <t:{task.get_unix_deadline()}:R> {task_members_mention}\n' if task.deadline and task.status != "COMPLETED" else \
+                    f'{index}. {task.name} {task_status} {task_members_mention}\n'
             else:
                 task_list += "No tasks."
             # Creating embed.
@@ -355,14 +358,15 @@ async def set_active_channel_command(command, workflow, client):
                   task_list += "\n"
                 if len(project.tasks) != 0:
                     for task in project.tasks:
+                      if not task.archive:
                         task_members_mention = ""
                         task_status = ""
-                        if task.complete:
-                          task_status += "**`COMPLETED`**"
+                        if task.status:
+                          task_status += f"**`{task.status}`**"
                         for member_id in task.member_ids:
                             member = await workflow.active_message.guild.fetch_member(member_id)
                             task_members_mention += member.mention 
-                        task_list += f'- {task.name} Due <t:{task.get_unix_deadline()}:R> {task_members_mention}\n' if task.deadline else \
+                        task_list += f'- {task.name} Due <t:{task.get_unix_deadline()}:R> {task_members_mention}\n' if task.deadline and task.status != "COMPLETED" else \
                     f'- {task.name} {task_status} {task_members_mention}\n'
                 else:
                     task_list += "No tasks."
@@ -397,7 +401,7 @@ async def restart_looping(client,workflow,guild):
         if len(workflow.projects) != 0:
             for project in workflow.projects:
                 # Creating field title.
-                field_title = f'{workflow.projects.index(project)+1}. {project.name} - Deadline <t:{project.get_unix_deadline()}:R>' if project.deadline else \
+                field_title = f'{workflow.projects.index(project)+1}. {project.name} - Deadline <t:{project.get_unix_deadline()}:R>' if project.deadline  else \
                 f'{workflow.projects.index(project)+1}. {project.name}'
                 # Creating task list for field.
                 task_list = ""
@@ -407,15 +411,16 @@ async def restart_looping(client,workflow,guild):
                   task_list += "\n"
                 if len(project.tasks) != 0:
                     for task in project.tasks:
+                      if not task.archive:
                         task_members_mention = ""
                         task_status = ""
-                        if task.complete:
-                          task_status += "**`COMPLETED`**"
+                        if task.status:
+                          task_status += f"**`{task.status}`**"
                         if len(task.member_ids) != 0:
                           for member_id in task.member_ids:
                             member = await workflow.active_message.guild.fetch_member(member_id)
                             task_members_mention += member.mention 
-                        task_list += f'- {task.name} Due <t:{task.get_unix_deadline()}:R> {task_members_mention}\n' if task.deadline else \
+                        task_list += f'- {task.name} Due <t:{task.get_unix_deadline()}:R> {task_members_mention}\n' if task.deadline and task.status != "COMPLETED" else \
                     f'- {task.name} {task_status} {task_members_mention}\n'
                 else:
                     task_list += "No tasks."

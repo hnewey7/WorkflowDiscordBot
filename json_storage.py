@@ -106,6 +106,9 @@ async def convert_from_json(workflow_json, client):
       # Adding project.
       project = workflow.add_project(project_title,project_deadline)
       project.team_ids = workflow_json[guild_id]['projects'][project_id]['team_ids']
+      project.description = workflow_json[guild_id]['projects'][project_id]['description']
+      project.status = workflow_json[guild_id]['projects'][project_id]['status']
+      project.priority = workflow_json[guild_id]['projects'][project_id]['priority']
       logger.info(f"Loading project, {project_title} ({project_deadline}).")
 
       # Adding tasks.
@@ -121,8 +124,9 @@ async def convert_from_json(workflow_json, client):
         # Adding attributes to task.
         new_task.member_ids = task['member_ids']
         new_task.description = task['description']
-        new_task.complete = task['complete']
+        new_task.status = task['status']
         new_task.priority = task['priority']
+        new_task.archive = task['archive']
 
         logger.info(f"Loading task, {task_name} ({task_deadline}).")
     

@@ -28,163 +28,6 @@ global logger
 logger = logging.getLogger()
 
 # - - - - - - - - - - - - - - - - - -
-'''
-class ManageProjectsView(discord.ui.View):
-
-  def __init__(self, workflow,command,client):
-    super().__init__()
-    self.workflow= workflow
-    self.command = command
-    self.guild = command.guild
-    self.client = client
-
-  def get_team_selection(self,role_selection):
-    team_selection = []
-    # Getting team selection.
-    for role in role_selection:
-      if " Manager" not in role.name:
-        team = self.workflow.get_team_from_role_id(role.id)
-      else:
-        team = self.workflow.get_team_from_manager_id(role.id)
-      # Adding team to selection.
-      if team not in team_selection:
-        team_selection.append(team)
-    return team_selection
-
-  @discord.ui.select(cls=discord.ui.RoleSelect,placeholder="Team",max_values=25)
-  async def select_team(self, interaction: discord.Interaction, select: discord.ui.RoleSelect):
-    async_tasks = []
-    async_tasks.append(asyncio.create_task(self.proceed_task()))
-    for team in self.get_team_selection(select.values):
-      async_tasks.append(asyncio.create_task(self.send_team_message(team)))
-    await asyncio.wait(async_tasks,return_when=asyncio.FIRST_COMPLETED)
-    await interaction.response.defer()
-  
-  async def proceed_task(self):
-    pass
-
-  async def send_team_message(self,team):
-    standard_role = self.guild.get_role(team.role_id)
-    initial_check = True
-    while True:
-      # Creating individual teams message.
-      embed = discord.Embed(color=standard_role.colour,title=team.name)
-      # Adding current projects to message.
-      if len(team.projects) != 0:
-        description = ""
-        for project in team.projects:
-          description += f'{team.projects.index(project)+1}. {project.name} - Deadline <t:{project.get_unix_deadline()}:R>\n' if project.deadline else \
-        f'{team.projects.index(project)+1}. {project.name}\n'
-      else:
-        description = "No projects."
-      embed.add_field(name="Current Projects:",value=description,inline=False)
-      # Creating view to add projects.
-      view = IndividualTeamView(self.workflow,team,self.client,standard_role)
-
-      # Toggling buttons.
-      available_projects = get_project_selection(self.workflow,team,True)
-      if len(available_projects) == 0:
-        view.assign_project.disabled = True
-      
-      available_projects = get_project_selection(self.workflow,team,False)
-      if len(available_projects) == 0:
-        view.remove_project.disabled = True
-      
-      if initial_check:
-        message = await self.command.channel.send(embed=embed,view=view,delete_after=300)
-        initial_check = False
-        await self.client.wait_for("interaction")
-      else:
-        await message.edit(embed=embed,view=view,delete_after=300)
-        await self.client.wait_for("interaction")
-    
-
-class IndividualTeamView(discord.ui.View):
-
-  def __init__(self,workflow,team,client,role):
-    super().__init__()
-    self.workflow = workflow
-    self.team = team
-    self.client = client
-    self.role = role
-  
-  def create_select_menu(self,menu_type: bool):
-    # Creating select menu.
-    available_projects = get_project_selection(self.workflow,self.team,menu_type)
-    project_select = ProjectSelectMenu(self.workflow,self.team,menu_type)
-    project_select.placeholder = "Projects"
-    project_select.max_values = len(available_projects)
-    project_select.options = available_projects
-    return project_select
-
-  @discord.ui.button(label="Assign Project",style=discord.ButtonStyle.primary)
-  async def assign_project(self,interaction: discord.Interaction,button: discord.ui.Button):
-    view = discord.ui.View()
-    # Creating embed.
-    embed = discord.Embed(color=self.role.colour,description=f"Select a project to assign to {self.role.name}:")
-    # Creating select menu.
-    select_menu = self.create_select_menu(True)
-    view.add_item(select_menu)
-    # Sending message.
-    await interaction.response.send_message(embed=embed,view=view)
-    # Deleting message after interaction.
-    await self.client.wait_for("interaction")
-    await interaction.delete_original_response()
-
-  @discord.ui.button(label="Remove Project",style=discord.ButtonStyle.primary)
-  async def remove_project(self,interaction: discord.Interaction,button: discord.ui.Button):
-    view = discord.ui.View()
-    # Creating embed.
-    embed = discord.Embed(color=self.role.colour,description=f"Select a project to remove from {self.role.name}:")
-    # Creating select menu.
-    select_menu = self.create_select_menu(False)
-    view.add_item(select_menu)
-    # Sending message.
-    await interaction.response.send_message(embed=embed,view=view)
-    # Deleting message after interaction.
-    await self.client.wait_for("interaction")
-    await interaction.delete_original_response()
-
-
-class ProjectSelectMenu(discord.ui.Select):
-
-  def __init__(self,workflow,team,menu_type):
-    super().__init__()
-    self.workflow = workflow
-    self.team = team
-    self.menu_type = menu_type
-
-  async def callback(self, interaction: discord.Interaction):
-    for project_title in self.values:
-      project = self.workflow.get_project_from_title(project_title)
-      if self.menu_type:
-        self.team.add_project(project)
-        logger.info(f"Assigned {project.name} to {self.team.name}")
-      else:
-        self.team.del_project(project)
-        logger.info(f"Removed {project.name} from {self.team.name}")
-    await interaction.response.defer()
-
-
-# - - - - - - - - - - - - - - - - - -
-    
-def get_project_selection(workflow,team,menu_type):
-    project_selection = []
-    # Creating project option.
-    if menu_type:
-      for project in workflow.projects:
-        if project not in team.projects:
-          project_option = discord.SelectOption(label=project.name)
-          project_selection.append(project_option)
-    else:
-      for project in team.projects:
-        project_option = discord.SelectOption(label=project.name)
-        project_selection.append(project_option)
-    return project_selection
-
-'''
-
-# - - - - - - - - - - - - - - - - - -
 
 class ProjectSelectMenu(discord.ui.Select):#
 
@@ -218,11 +61,16 @@ class ProjectSelectMenu(discord.ui.Select):#
     initial_check = True
     while True:
       description = ""
+      if project.description:
+        description += project.description
       # Creating project message.
       embed = discord.Embed(color=discord.Color.blurple(),title=project.name + f" - due <t:{project.get_unix_deadline()}:R>" ,description=description)
       # Adding status to message.
-      status = "**`Pending`**"
+      status = f"**`{project.status}`**"
       embed.add_field(name="Status:",value=status,inline=True)
+      # Adding priority to message.
+      if project.priority:
+        embed.add_field(name="Priority:",value=f"**`{project.priority}`**",inline=True)
       # Adding teams to message.
       teams_list = ""
       if len(project.get_teams_from_ids(self.workflow)) != 0:
@@ -236,21 +84,35 @@ class ProjectSelectMenu(discord.ui.Select):#
       task_list = ""
       if len(project.tasks) != 0:
         for task in project.tasks:
-          task_members_mention = ""
-          task_status = ""
-          if task.complete:
-            task_status += "**`COMPLETED`**"
-          for member_id in task.member_ids:
-            member = await self.workflow.active_message.guild.fetch_member(member_id)
-            task_members_mention += member.mention 
-          task_list += f'{project.tasks.index(task)+1}. {task.name} Due <t:{task.get_unix_deadline()}:R> {task_members_mention}\n' if task.deadline else \
-          f'{project.tasks.index(task)+1}. {task.name} {task_status} {task_members_mention}\n'
+          index = 0
+          if not task.archive:
+            index += 1
+            task_members_mention = ""
+            task_status = ""
+            if task.status:
+              task_status += f"**`{task.status}`**"
+            for member_id in task.member_ids:
+              member = await self.workflow.active_message.guild.fetch_member(member_id)
+              task_members_mention += member.mention 
+            task_list += f'{index}. {task.name} Due <t:{task.get_unix_deadline()}:R> {task_members_mention}\n' if task.deadline and task.status != "COMPLETED" else \
+            f'{index}. {task.name} {task_status} {task_members_mention}\n'
       else:
         task_list += "No tasks."
       embed.add_field(name="Tasks:",value=task_list,inline=False)
 
       # Creating buttons view.
       view = IndividualProjectView(project,self.workflow,self.client)
+
+      # Toggling buttons.
+      available_teams = get_team_selection(project,self.workflow,True)
+      if len(available_teams) == 0:
+        view.assign_team.disabled = True
+      available_teams = get_team_selection(project,self.workflow,False)
+      if len(available_teams) == 0:
+        view.remove_team.disabled = True
+
+      if get_completed_count(project) == 0:
+        view.archive_completed.disabled = True
 
       if initial_check:
         message = await self.command.channel.send(embed=embed,view=view,delete_after=300)
@@ -287,11 +149,33 @@ class IndividualProjectView(discord.ui.View):
 
   @discord.ui.button(label="Change Status",style=discord.ButtonStyle.primary)
   async def change_status(self,interaction:discord.Interaction,button:discord.ui.Button):
-    await interaction.response.defer()
+    # Sending message to change status.
+    view = discord.ui.View()
+    # Creating embed.
+    embed = discord.Embed(color=discord.Color.blurple(),description=f"Select a status for the task:")
+    # Creating select menu.
+    select_menu = self.create_status_menu()
+    view.add_item(select_menu)
+    # Sending message.
+    await interaction.response.send_message(embed=embed,view=view)
+    # Deleting message after interaction.
+    await self.client.wait_for("interaction")
+    await interaction.delete_original_response()
 
   @discord.ui.button(label="Change Priority",style=discord.ButtonStyle.primary)
   async def change_priority(self,interaction:discord.Interaction,button:discord.ui.Button):
-    await interaction.response.defer()
+    # Sending message to set priority.
+    view = discord.ui.View()
+    # Creating embed.
+    embed = discord.Embed(color=discord.Color.blurple(),description=f"Select a priority for the task:")
+    # Creating select menu.
+    select_menu = self.create_priority_menu()
+    view.add_item(select_menu)
+    # Sending message.
+    await interaction.response.send_message(embed=embed,view=view)
+    # Deleting message after interaction.
+    await self.client.wait_for("interaction")
+    await interaction.delete_original_response()
 
   @discord.ui.button(label="Finish Edit",style=discord.ButtonStyle.success)
   async def finish_edit(self,interaction:discord.Interaction,button:discord.ui.Button):
@@ -311,6 +195,40 @@ class IndividualProjectView(discord.ui.View):
     await self.client.wait_for("interaction")
     await interaction.delete_original_response()
 
+  @discord.ui.button(label="Remove Team",style=discord.ButtonStyle.primary,row=2)
+  async def remove_team(self,interaction:discord.Interaction,button:discord.ui.Button):
+    # Sending select team message.
+    embed = discord.Embed(colour=discord.Color.blurple(),title="",description=f"Select a team to remove from {self.project.name}:")
+    # Creating view for message.
+    view = discord.ui.View()
+    select_menu = self.create_team_menu(False)
+    view.add_item(select_menu)
+    # Sending message.
+    await interaction.response.send_message(embed=embed,view=view)
+    # Deleting message after interaction.
+    await self.client.wait_for("interaction")
+    await interaction.delete_original_response()
+
+  @discord.ui.button(label="Add Task",style=discord.ButtonStyle.primary,row=2)
+  async def add_task(self,interaction:discord.Interaction,button:discord.ui.Button):
+    await interaction.response.defer()
+  
+  @discord.ui.button(label="Edit Task",style=discord.ButtonStyle.primary,row=2)
+  async def edit_task(self,interaction:discord.Interaction,button:discord.ui.Button):
+    await interaction.response.defer()
+  
+  @discord.ui.button(label="Delete Task",style=discord.ButtonStyle.primary,row=2)
+  async def delete_task(self,interaction:discord.Interaction,button:discord.ui.Button):
+    await interaction.response.defer()
+
+  @discord.ui.button(label="Archive Completed",style=discord.ButtonStyle.primary,row=4)
+  async def archive_completed(self,interaction:discord.Interaction,button:discord.ui.Button):
+    # Setting all completed tasks to archive.
+    for task in self.project.tasks:
+      if task.status == "COMPLETED":
+        task.archive = True
+    await interaction.response.defer()
+
   def create_team_menu(self,menu_type:bool):
     # Getting available teams.
     available_teams = get_team_selection(self.project,self.workflow,menu_type)
@@ -320,6 +238,20 @@ class IndividualProjectView(discord.ui.View):
     member_select.options = available_teams
     return member_select
   
+  def create_status_menu(self):
+    status_select = StatusSelectMenu(self.project)
+    status_select.placeholder = "Status"
+    status_select.max_values = 1
+    status_select.options = get_status_selection()
+    return status_select
+
+  def create_priority_menu(self):
+    priority_select = PrioritySelectMenu(self.project)
+    priority_select.placeholder = "Priority"
+    priority_select.max_values = 1
+    priority_select.options = get_priority_selection()
+    return priority_select
+
 
 class TeamSelectMenu(discord.ui.Select):
   
@@ -338,6 +270,32 @@ class TeamSelectMenu(discord.ui.Select):
       else:
         self.project.remove_team(team)
         logger.info(f"Removed {team.name} from ({self.project.name})")
+    await interaction.response.defer()
+
+
+class StatusSelectMenu(discord.ui.Select):
+
+  def __init__(self,project):
+    super().__init__()
+    self.project = project
+  
+  async def callback(self, interaction: discord.Interaction):
+    # Setting status from selected value.
+    self.project.change_status(self.values[0])
+    logger.info(f"Changed status of ({self.project.name}) to {self.values[0]}.")
+    await interaction.response.defer()
+
+
+class PrioritySelectMenu(discord.ui.Select):
+  
+  def __init__(self,project):
+    super().__init__()
+    self.project = project
+
+  async def callback(self, interaction: discord.Interaction):
+    # Setting priority from selected value.
+    self.project.change_priority(self.values[0])
+    logger.info(f"Changed priority of ({self.project.name}) to {self.values}")
     await interaction.response.defer()
 
 
@@ -385,21 +343,42 @@ def get_team_selection(project,workflow,menu_type):
   if menu_type:
     # Selecting from unassigned teams.
     for team in workflow.teams:
-      print(team)
       if team not in project.get_teams_from_ids(workflow):
         available_teams.append(team)
     # Selecting from assigned teams.
-    else:
-      for team in project.get_teams_from_ids(workflow):
-        available_teams.append(team)
+  else:
+    for team in project.get_teams_from_ids(workflow):
+      available_teams.append(team)
 
   # Converting to select options.
   options = []
-  print(available_teams)
   for team in available_teams:
     option = discord.SelectOption(label=team.name)
     options.append(option)
   return options
+
+def get_status_selection():
+  statuses = ["PENDING","COMPLETED"]
+  options = []
+  for status in statuses:
+    option = discord.SelectOption(label=status)
+    options.append(option)
+  return options
+
+def get_priority_selection():
+  priorities = ["LOW","MEDIUM","HIGH","URGENT","EMERGENCY"]
+  options = []
+  for priority in priorities:
+    option = discord.SelectOption(label=priority)
+    options.append(option)
+  return options
+
+def get_completed_count(project):
+  count = 0
+  for task in project.tasks:
+    if task.status == "COMPLETED" and task.archive == False:
+      count += 1
+  return count
 
 # - - - - - - - - - - - - - - - - - -
 
