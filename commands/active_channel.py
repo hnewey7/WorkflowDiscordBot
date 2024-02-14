@@ -270,8 +270,13 @@ class DelTaskModal(discord.ui.Modal,title="Delete Task"):
 
     async def on_submit(self, interaction: discord.Interaction):
         # Deleting task from project.
-        self.project.del_task(int(self.number_input.value))
-        await interaction.response.defer()
+        count = 0
+        for task in self.project.tasks:
+          if not task.archive:
+            count += 1
+          if count == int(self.number_input.value):
+            self.project.tasks.remove(task)
+            await interaction.response.defer()
 
 
 

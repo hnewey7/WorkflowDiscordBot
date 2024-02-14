@@ -21,6 +21,7 @@ import logging
 
 from discord.interactions import Interaction
 from .misc import get_admin_role, get_team_manager_roles
+from .manage_task import IndividualTaskView,get_member_selection
 
 # - - - - - - - - - - - - - - - - - -
 
@@ -101,7 +102,7 @@ class ProjectSelectMenu(discord.ui.Select):#
       embed.add_field(name="Tasks:",value=task_list,inline=False)
 
       # Creating buttons view.
-      view = IndividualProjectView(project,self.workflow,self.client)
+      view = IndividualProjectView(project,self.workflow,self.client,self.guild,self.command)
 
       # Toggling buttons.
       available_teams = get_team_selection(project,self.workflow,True)
@@ -130,11 +131,13 @@ class ProjectSelectMenu(discord.ui.Select):#
 
 class IndividualProjectView(discord.ui.View):
 
-  def __init__(self,project,workflow,client):
+  def __init__(self,project,workflow,client,guild,command):
     super().__init__()
     self.project = project
     self.workflow = workflow
     self.client = client
+    self.guild = guild
+    self.command = command
     self.close_check = False
 
   @discord.ui.button(label="Change Title",style=discord.ButtonStyle.primary)
@@ -211,15 +214,18 @@ class IndividualProjectView(discord.ui.View):
 
   @discord.ui.button(label="Add Task",style=discord.ButtonStyle.primary,row=2)
   async def add_task(self,interaction:discord.Interaction,button:discord.ui.Button):
-    await interaction.response.defer()
+    # Sending add task modal.
+    await interaction.response.send_modal(AddTaskModal(project=self.project))
   
   @discord.ui.button(label="Edit Task",style=discord.ButtonStyle.primary,row=2)
   async def edit_task(self,interaction:discord.Interaction,button:discord.ui.Button):
-    await interaction.response.defer()
+    # Sending edit task modal.
+    await interaction.response.send_modal(EditTaskModal(self.project,self.guild,self.client,self.workflow,self.command))
   
   @discord.ui.button(label="Delete Task",style=discord.ButtonStyle.primary,row=2)
   async def delete_task(self,interaction:discord.Interaction,button:discord.ui.Button):
-    await interaction.response.defer()
+    # Sending delete task modal.
+    await interaction.response.send_modal(DelTaskModal(project=self.project))
 
   @discord.ui.button(label="Archive Completed",style=discord.ButtonStyle.primary,row=4)
   async def archive_completed(self,interaction:discord.Interaction,button:discord.ui.Button):
@@ -329,6 +335,138 @@ class ChangeDeadlineModal(discord.ui.Modal,title="Change Deadline"):
     # Changing title.
     self.project.edit_deadline(self.deadline_input.value)
     await interaction.response.defer()
+
+
+class AddTaskModal(discord.ui.Modal,title="Add Task"):
+
+  def __init__(self,project):
+    super().__init__()
+    self.project = project
+
+  # Requires task name and deadline.
+  task_input = discord.ui.TextInput(label="Please enter a task name:",style=discord.TextStyle.short,placeholder="Name",required=True,max_length=100)
+  deadline_input =  discord.ui.TextInput(label="Please enter a task deadline (dd mm yyyy):",style=discord.TextStyle.short,placeholder="dd mm yyyy",required=False,max_length=10)
+
+  async def on_submit(self, interaction: discord.Interaction):
+    # Checking if deadline entered.
+    if self.deadline_input.value == "":
+      self.project.add_task(self.task_input.value,None)
+    else:
+      # Adding task to project.
+      self.project.add_task(self.task_input.value,self.deadline_input.value)
+    await interaction.response.defer()
+
+
+class DelTaskModal(discord.ui.Modal,title="Delete Task"):
+
+  def __init__(self,project):
+    super().__init__()
+    self.project = project
+
+  # Requires task number to delete.
+  number_input = discord.ui.TextInput(label="Please enter a task number:",style=discord.TextStyle.short,placeholder="Task Number",required=True,max_length=2)
+
+  async def on_submit(self, interaction: discord.Interaction):
+    # Deleting task from project.
+    count = 0
+    for task in self.project.tasks:
+      if not task.archive:
+        count += 1
+      if count == int(self.number_input.value):
+        self.project.tasks.remove(task)
+        await interaction.response.defer()
+
+
+class EditTaskModal(discord.ui.Modal,title="Edit Task"):
+
+  def __init__(self,project,guild,client,workflow,command):
+    super().__init__()
+    self.project = project
+    self.guild = guild
+    self.client = client
+    self.workflow = workflow
+    self.command = command
+
+  # Requires task number
+  number_input = discord.ui.TextInput(label="Please enter a task number:",style=discord.TextStyle.short,placeholder="Task Number",required=True,max_length=2)
+
+  async def on_submit(self, interaction: discord.Interaction):
+    # Editing task from project.
+    count = 0
+    for task in self.project.tasks:
+      if not task.archive:
+        count += 1
+      if count == int(self.number_input.value):
+        break
+    
+    # Creating tasks.
+    tasks = []
+    tasks.append(await asyncio.create_task(progress(interaction)))
+    tasks.append(await asyncio.create_task(send_edit_task_message(task,self.guild,self.client,self.workflow,self.command)))
+    await asyncio.wait(tasks)
+
+# - - - - - - - - - - - - - - - - - -
+      
+async def progress(interaction):
+  await interaction.response.defer()
+
+async def send_edit_task_message(task,guild,client,workflow,command):
+  # Sending edit task message.
+  initial_check = True
+  while True:
+    # Getting task members.
+    task_members = []
+    for member_id in task.member_ids:
+      task_members.append(guild.get_member(member_id))
+  
+    # Getting description.
+    if task.description:
+      description = task.description
+    else:
+      description = ""
+
+    # Creating individual teams message.
+    embed = discord.Embed(color=discord.Color.blurple(),title=task.name,description=description)
+    # Adding status to message.
+    status = f"**`{task.status}`**"
+    embed.add_field(name="Status:",value=status,inline=True)
+    # Adding priority to message.
+    if task.priority:
+      embed.add_field(name="Priority:",value=task.priority,inline=True)
+    # Adding members to message.
+    if len(task_members) != 0:
+      description = ""
+      for member in task_members:
+        description += f'- {member.name}\n'
+    else:
+      description = "No members."
+    embed.add_field(name="Current members:",value=description,inline=True)
+
+    view = IndividualTaskView(task,guild,client,workflow)
+
+    # Toggling buttons.
+    available_members = get_member_selection(task,workflow,guild,True)
+    if len(available_members) == 0:
+      view.assign_member.disabled = True
+
+    available_members = get_member_selection(task,workflow,guild,False)
+    if len(available_members) == 0:
+      view.remove_member.disabled = True
+
+    if initial_check:
+      message = await command.channel.send(embed=embed,view=view,delete_after=300)
+      initial_check = False
+      await client.wait_for("interaction")
+    else:
+      await message.edit(embed=embed,view=view,delete_after=300)
+      await client.wait_for("interaction")
+
+    # Checking to close message.
+    if view.close_check:
+      await message.delete()
+      break
+
+
 # - - - - - - - - - - - - - - - - - -
     
 def create_project_options(projects):
