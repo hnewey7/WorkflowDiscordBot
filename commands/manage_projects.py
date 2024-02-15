@@ -20,7 +20,7 @@ import asyncio
 import logging
 
 from discord.interactions import Interaction
-from .misc import get_admin_role, get_team_manager_roles
+from .misc import get_admin_role, check_team_manager, get_projects_for_member
 from .manage_task import IndividualTaskView,get_member_selection
 
 # - - - - - - - - - - - - - - - - - -
@@ -101,19 +101,23 @@ class ProjectSelectMenu(discord.ui.Select):#
         task_list += "No tasks."
       embed.add_field(name="Tasks:",value=task_list,inline=False)
 
-      # Creating buttons view.
-      view = IndividualProjectView(project,self.workflow,self.client,self.guild,self.command)
-
-      # Toggling buttons.
-      available_teams = get_team_selection(project,self.workflow,True)
-      if len(available_teams) == 0:
-        view.assign_team.disabled = True
-      available_teams = get_team_selection(project,self.workflow,False)
-      if len(available_teams) == 0:
-        view.remove_team.disabled = True
-
-      if get_completed_count(project) == 0:
-        view.archive_completed.disabled = True
+      # Creating relevant view.
+      if await get_admin_role(self.command.guild) in self.command.author.roles:
+        view = WorkflowManagerIndividualProjectView(project,self.workflow,self.client,self.guild,self.command)
+        # Toggling buttons.
+        available_teams = get_team_selection(project,self.workflow,True)
+        if len(available_teams) == 0:
+          view.assign_team.disabled = True
+        available_teams = get_team_selection(project,self.workflow,False)
+        if len(available_teams) == 0:
+          view.remove_team.disabled = True
+        if get_completed_count(project) == 0:
+          view.archive_completed.disabled = True
+        
+      else:
+        view = TeamManagerIndividualProjectView(project,self.workflow,self.client,self.guild,self.command)
+        if get_completed_count(project) == 0:
+          view.archive_completed.disabled = True
 
       if initial_check:
         message = await self.command.channel.send(embed=embed,view=view,delete_after=300)
@@ -129,7 +133,7 @@ class ProjectSelectMenu(discord.ui.Select):#
         break
         
 
-class IndividualProjectView(discord.ui.View):
+class WorkflowManagerIndividualProjectView(discord.ui.View):
 
   def __init__(self,project,workflow,client,guild,command):
     super().__init__()
@@ -235,6 +239,8 @@ class IndividualProjectView(discord.ui.View):
         task.archive = True
     await interaction.response.defer()
 
+  @discord.ui.button(label="Show Archive",style=discord.ButtonStyle.primary,row=4)
+
   def create_team_menu(self,menu_type:bool):
     # Getting available teams.
     available_teams = get_team_selection(self.project,self.workflow,menu_type)
@@ -257,6 +263,51 @@ class IndividualProjectView(discord.ui.View):
     priority_select.max_values = 1
     priority_select.options = get_priority_selection()
     return priority_select
+
+
+class TeamManagerIndividualProjectView(discord.ui.View):
+
+  def __init__(self,project,workflow,client,guild,command):
+    super().__init__()
+    self.project = project
+    self.workflow = workflow
+    self.client = client
+    self.guild = guild
+    self.command = command
+    self.close_check = False
+
+  @discord.ui.button(label="Request Approval",style=discord.ButtonStyle.primary)
+  async def request_completion(self,interaction:discord.Interaction,button:discord.ui.Button):
+    # Changing project status to APPROVAL PENDING.
+    self.project.status = "APPROVAL PENDING"
+    await interaction.response.defer()
+
+  @discord.ui.button(label="Archive Completed",style=discord.ButtonStyle.primary)
+  async def archive_completed(self,interaction:discord.Interaction,button:discord.ui.Button):
+    # Setting all completed tasks to archive.
+    for task in self.project.tasks:
+      if task.status == "COMPLETED":
+        task.archive = True
+    await interaction.response.defer()
+
+  @discord.ui.button(label="Finish Edit",style=discord.ButtonStyle.success)
+  async def finish_edit(self,interaction:discord.Interaction,button:discord.ui.Button):
+    self.close_check = True
+
+  @discord.ui.button(label="Add Task",style=discord.ButtonStyle.primary,row=2)
+  async def add_task(self,interaction:discord.Interaction,button:discord.ui.Button):
+    # Sending add task modal.
+    await interaction.response.send_modal(AddTaskModal(project=self.project))
+  
+  @discord.ui.button(label="Edit Task",style=discord.ButtonStyle.primary,row=2)
+  async def edit_task(self,interaction:discord.Interaction,button:discord.ui.Button):
+    # Sending edit task modal.
+    await interaction.response.send_modal(EditTaskModal(self.project,self.guild,self.client,self.workflow,self.command))
+  
+  @discord.ui.button(label="Delete Task",style=discord.ButtonStyle.primary,row=2)
+  async def delete_task(self,interaction:discord.Interaction,button:discord.ui.Button):
+    # Sending delete task modal.
+    await interaction.response.send_modal(DelTaskModal(project=self.project))
 
 
 class TeamSelectMenu(discord.ui.Select):
@@ -518,9 +569,17 @@ def get_completed_count(project):
       count += 1
   return count
 
+def get_archive_count(project):
+  count = 0
+  for task in project.tasks:
+    if task.archive:
+      count += 1
+  return count
+
 # - - - - - - - - - - - - - - - - - -
 
 async def manage_projects(command,client,workflow):
+  # Workflow Manager functionality.
   if await get_admin_role(command.guild) in command.author.roles:
     logger.info("Command request approved.")
     channel = command.channel
@@ -530,6 +589,27 @@ async def manage_projects(command,client,workflow):
     # Creating project select menu.
     project_select_menu = ProjectSelectMenu(workflow,command,client)
     available_projects = workflow.projects
+    available_project_options = create_project_options(available_projects)
+    if len(available_projects) != 0:
+      project_select_menu.placeholder = "Projects"
+      project_select_menu.max_values = len(available_projects)
+      project_select_menu.options = available_project_options
+      view.add_item(project_select_menu)
+      # Sending  message to channel.
+      await channel.send(embed=embed,view=view,delete_after=300)
+    else:
+      embed = discord.Embed(color=discord.Color.blurple(),description="No projects to manage.")
+      await channel.send(embed=embed,delete_after=300)
+  # Team Manager functionality.
+  elif check_team_manager(command.author,command.guild,workflow):
+    logger.info("Command request approved.")
+    channel = command.channel
+    # Creating embed and view.
+    embed = discord.Embed(color=discord.Color.blurple(),description="Please select a project to manage:")
+    view = discord.ui.View()
+    # Creating project select menu.
+    project_select_menu = ProjectSelectMenu(workflow,command,client)
+    available_projects = get_projects_for_member(command.author,workflow)
     available_project_options = create_project_options(available_projects)
     if len(available_projects) != 0:
       project_select_menu.placeholder = "Projects"

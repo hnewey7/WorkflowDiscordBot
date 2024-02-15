@@ -62,6 +62,14 @@ async def get_admin_role(guild):
         if role.name == "Workflow Manager":
             return role
 
+# Check for team manager.
+def check_team_manager(member,guild,workflow):
+  for role in member.roles:
+    for manager_role in get_team_manager_roles(guild,workflow):
+      if role == manager_role:
+        return True
+  return False
+
 # Getting each manager role.
 def get_team_manager_roles(guild,workflow):
   manager_roles = []
@@ -69,3 +77,13 @@ def get_team_manager_roles(guild,workflow):
   for team in workflow.teams:
     manager_roles.append(guild.get_role(team.manager_role_id))
   return manager_roles
+
+# Get all projects for a member.
+def get_projects_for_member(member,workflow):
+  # Getting projects.
+  projects = []
+  for role in member.roles:
+    for team in workflow.teams:
+      if role.id == team.role_id:
+        projects.extend(team.get_projects_from_ids(workflow))
+  return projects
