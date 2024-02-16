@@ -60,6 +60,7 @@ class ProjectSelectMenu(discord.ui.Select):#
   
   async def send_project_message(self,project):
     initial_check = True
+    archive_check = False
     while True:
       description = ""
       if project.description:
@@ -113,11 +114,43 @@ class ProjectSelectMenu(discord.ui.Select):#
           view.remove_team.disabled = True
         if get_completed_count(project) == 0:
           view.archive_completed.disabled = True
-        
+        if get_archive_count(project) == 0:
+          view.show_archive.disabled = True
+        if archive_check:
+          view.show_archive.disabled = True
+        else:
+          view.hide_archive.disabled = True
       else:
         view = TeamManagerIndividualProjectView(project,self.workflow,self.client,self.guild,self.command)
+        # Toggling buttons.
         if get_completed_count(project) == 0:
           view.archive_completed.disabled = True
+        if get_archive_count(project) == 0:
+          view.show_archive.disabled = True
+        if archive_check:
+          view.show_archive.disabled = True
+        else:
+          view.hide_archive.disabled = True
+
+      if archive_check:
+        task_list = ""
+        if len(project.tasks) != 0:
+          for task in project.tasks:
+            index = 0
+            if task.archive:
+              index += 1
+              task_members_mention = ""
+              task_status = ""
+              if task.status:
+                task_status += f"**`{task.status}`**"
+              for member_id in task.member_ids:
+                member = await self.workflow.active_message.guild.fetch_member(member_id)
+                task_members_mention += member.mention 
+              task_list += f'{index}. {task.name} Due <t:{task.get_unix_deadline()}:R> {task_members_mention}\n' if task.deadline and task.status != "COMPLETED" else \
+              f'{index}. {task.name} {task_status} {task_members_mention}\n'
+        else:
+          task_list += "No tasks."
+        embed.add_field(name="Archived Tasks:",value=task_list,inline=False)
 
       if initial_check:
         message = await self.command.channel.send(embed=embed,view=view,delete_after=300)
@@ -131,6 +164,13 @@ class ProjectSelectMenu(discord.ui.Select):#
       if view.close_check:
         await message.delete()
         break
+      
+      # Adding archive to message.
+      if view.archive_check:
+        archive_check = True
+      else:
+        archive_check = False
+
         
 
 class WorkflowManagerIndividualProjectView(discord.ui.View):
@@ -143,6 +183,7 @@ class WorkflowManagerIndividualProjectView(discord.ui.View):
     self.guild = guild
     self.command = command
     self.close_check = False
+    self.archive_check = False
 
   @discord.ui.button(label="Change Title",style=discord.ButtonStyle.primary)
   async def change_title(self,interaction:discord.Interaction,button:discord.ui.Button):
@@ -240,6 +281,14 @@ class WorkflowManagerIndividualProjectView(discord.ui.View):
     await interaction.response.defer()
 
   @discord.ui.button(label="Show Archive",style=discord.ButtonStyle.primary,row=4)
+  async def show_archive(self,interaction:discord.Interaction,button:discord.ui.Button):
+    self.archive_check = True
+    await interaction.response.defer()
+
+  @discord.ui.button(label="Hide Archive",style=discord.ButtonStyle.primary,row=4)
+  async def hide_archive(self,interaction:discord.Interaction,button:discord.ui.Button):
+    self.archive_check = False
+    await interaction.response.defer()
 
   def create_team_menu(self,menu_type:bool):
     # Getting available teams.
