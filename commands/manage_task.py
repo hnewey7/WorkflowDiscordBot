@@ -12,7 +12,7 @@ import logging
 import asyncio
 
 from discord.interactions import Interaction
-from .misc import get_admin_role
+from .misc import get_admin_role, check_team_manager
 
 # - - - - - - - - - - - - - - - - - - - - - -
 
@@ -347,7 +347,7 @@ def get_status_selection():
 # - - - - - - - - - - - - - - - - - - - - - -
 
 async def manage_tasks(command,client,workflow):
-  if await get_admin_role(command.guild) in command.author.roles:
+  if check_team_manager(command.author,command.guild,workflow):
     logger.info("Command request approved.")
     channel = command.channel
     # Creating embed and view.
@@ -369,4 +369,4 @@ async def manage_tasks(command,client,workflow):
       await channel.send(embed=embed,delete_after=300)
   else:
     # Sending private message.
-    await command.user.send("You do not have the necessary role to manage tasks.")
+    await command.author.send("You do not have the necessary role to manage tasks.")

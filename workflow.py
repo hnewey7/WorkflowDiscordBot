@@ -29,6 +29,13 @@ class Workflow():
 
   # Remove project with number.
   def del_project(self, number) -> None:
+    project = self.projects[number-1]
+    # Getting teams assigned to project.
+    team_ids = project.team_ids
+    for team_id in team_ids:
+      team = self.get_team_from_id(team_id)
+      team.project_ids.remove(project.id)
+    # Removing project.
     del self.projects[number-1]
 
   # Edit project with number.
@@ -67,6 +74,12 @@ class Workflow():
 
   # Delete team.
   def del_team(self,number):
+    team = self.teams[int(number)-1]
+    # Getting projects assigned to team.
+    for project_id in team.project_ids:
+      project = self.get_project_by_id(project_id)
+      project.team_ids.remove(team.id)
+    # Removing team.
     return self.teams.pop(int(number)-1)
   
   # Get manager role ids.
@@ -75,6 +88,13 @@ class Workflow():
     for team in self.teams:
       manager_ids.append(team.manager_role_id)
     return manager_ids
+
+  # Get team role ids.
+  def get_role_ids(self):
+    role_ids = []
+    for team in self.teams:
+      role_ids.append(team.role_id)
+    return role_ids
   
   # Get team from role id.
   def get_team_from_role_id(self,role_id):

@@ -94,7 +94,7 @@ class ProjectSelectMenu(discord.ui.Select):#
             if task.status:
               task_status += f"**`{task.status}`**"
             for member_id in task.member_ids:
-              member = await self.workflow.active_message.guild.fetch_member(member_id)
+              member = await self.guild.fetch_member(member_id)
               task_members_mention += member.mention 
             task_list += f'{index}. {task.name} Due <t:{task.get_unix_deadline()}:R> {task_members_mention}\n' if task.deadline and task.status != "COMPLETED" else \
             f'{index}. {task.name} {task_status} {task_members_mention}\n'
@@ -103,7 +103,7 @@ class ProjectSelectMenu(discord.ui.Select):#
       embed.add_field(name="Tasks:",value=task_list,inline=False)
 
       # Creating relevant view.
-      if await get_admin_role(self.command.guild) in self.command.author.roles:
+      if await get_admin_role(self.guild) in self.command.author.roles:
         view = WorkflowManagerIndividualProjectView(project,self.workflow,self.client,self.guild,self.command)
         # Toggling buttons.
         available_teams = get_team_selection(project,self.workflow,True)
@@ -144,7 +144,7 @@ class ProjectSelectMenu(discord.ui.Select):#
               if task.status:
                 task_status += f"**`{task.status}`**"
               for member_id in task.member_ids:
-                member = await self.workflow.active_message.guild.fetch_member(member_id)
+                member = await self.guild.fetch_member(member_id)
                 task_members_mention += member.mention 
               task_list += f'{index}. {task.name} Due <t:{task.get_unix_deadline()}:R> {task_members_mention}\n' if task.deadline and task.status != "COMPLETED" else \
               f'{index}. {task.name} {task_status} {task_members_mention}\n'
@@ -324,6 +324,7 @@ class TeamManagerIndividualProjectView(discord.ui.View):
     self.guild = guild
     self.command = command
     self.close_check = False
+    self.archive_check = False
 
   @discord.ui.button(label="Request Approval",style=discord.ButtonStyle.primary)
   async def request_completion(self,interaction:discord.Interaction,button:discord.ui.Button):
@@ -337,6 +338,16 @@ class TeamManagerIndividualProjectView(discord.ui.View):
     for task in self.project.tasks:
       if task.status == "COMPLETED":
         task.archive = True
+    await interaction.response.defer()
+
+  @discord.ui.button(label="Show Archive",style=discord.ButtonStyle.primary)
+  async def show_archive(self,interaction:discord.Interaction,button:discord.ui.Button):
+    self.archive_check = True
+    await interaction.response.defer()
+
+  @discord.ui.button(label="Hide Archive",style=discord.ButtonStyle.primary)
+  async def hide_archive(self,interaction:discord.Interaction,button:discord.ui.Button):
+    self.archive_check = False
     await interaction.response.defer()
 
   @discord.ui.button(label="Finish Edit",style=discord.ButtonStyle.success)
@@ -650,26 +661,27 @@ async def manage_projects(command,client,workflow):
       embed = discord.Embed(color=discord.Color.blurple(),description="No projects to manage.")
       await channel.send(embed=embed,delete_after=300)
   # Team Manager functionality.
-  elif check_team_manager(command.author,command.guild,workflow):
-    logger.info("Command request approved.")
-    channel = command.channel
-    # Creating embed and view.
-    embed = discord.Embed(color=discord.Color.blurple(),description="Please select a project to manage:")
-    view = discord.ui.View()
-    # Creating project select menu.
-    project_select_menu = ProjectSelectMenu(workflow,command,client)
-    available_projects = get_projects_for_member(command.author,workflow)
-    available_project_options = create_project_options(available_projects)
-    if len(available_projects) != 0:
-      project_select_menu.placeholder = "Projects"
-      project_select_menu.max_values = len(available_projects)
-      project_select_menu.options = available_project_options
-      view.add_item(project_select_menu)
-      # Sending  message to channel.
-      await channel.send(embed=embed,view=view,delete_after=300)
-    else:
-      embed = discord.Embed(color=discord.Color.blurple(),description="No projects to manage.")
-      await channel.send(embed=embed,delete_after=300)
   else:
-    # Sending private message.
-    await command.user.send("You do not have the necessary role to manage projects.")
+    if check_team_manager(command.author,command.guild,workflow):
+      logger.info("Command request approved.")
+      channel = command.channel
+      # Creating embed and view.
+      embed = discord.Embed(color=discord.Color.blurple(),description="Please select a project to manage:")
+      view = discord.ui.View()
+      # Creating project select menu.
+      project_select_menu = ProjectSelectMenu(workflow,command,client)
+      available_projects = get_projects_for_member(command.author,workflow)
+      available_project_options = create_project_options(available_projects)
+      if len(available_projects) != 0:
+        project_select_menu.placeholder = "Projects"
+        project_select_menu.max_values = len(available_projects)
+        project_select_menu.options = available_project_options
+        view.add_item(project_select_menu)
+        # Sending  message to channel.
+        await channel.send(embed=embed,view=view,delete_after=300)
+      else:
+        embed = discord.Embed(color=discord.Color.blurple(),description="No projects to manage.")
+        await channel.send(embed=embed,delete_after=300)
+    else:
+      # Sending private message.
+      await command.author.send("You do not have the necessary role to manage projects.")

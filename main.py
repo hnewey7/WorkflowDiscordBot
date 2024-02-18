@@ -104,9 +104,9 @@ def init_events(client):
 
         # Getting new role.
         for role in after.roles:
-            if role not in before.roles:
-                new_role = role
-        
+          if role not in before.roles:
+            new_role = role
+
         # Check if manager role.
         try:
             if new_role.id in manager_ids:
@@ -121,6 +121,44 @@ def init_events(client):
                 logging.info(f"Adding member to standard team role, {team_role.name}")
         except:
             pass
+        
+
+    @client.event
+    async def on_guild_role_delete(role):
+      logger.info("- - - - - - - - - - - - - - - - - - - - - -")
+      logging.info("Role deleted event.")
+      # Getting workflow.
+      guild = role.guild
+      workflow = workflows[str(guild.id)]
+      # Getting list of manager role ids.
+      manager_ids = workflow.get_manager_role_ids()
+      team_role_ids = workflow.get_role_ids()
+      
+      # Check if manager role.
+      if role.id in manager_ids:
+        logging.info(f"Manager role deleted, {role.name}")
+        # Getting team and deleting.
+        team = workflow.get_team_from_manager_id(role.id)
+        logging.info(f"Deleting team, {team.name}")
+        workflow.del_team(workflow.teams.index(team)+1)
+        # Removing team member role.
+        logging.info(f"Deleting team member role.")
+        role = guild.get_role(team.role_id)
+        await role.edit(reason="Trigger guild role event.")
+        await role.delete()
+      elif role.id in team_role_ids:
+        logging.info(f"Team member role deleted, {role.name}")
+        # Getting team and deleting.
+        team = workflow.get_team_from_role_id(role.id)
+        logging.info(f"Deleting team, {team.name}")
+        workflow.del_team(workflow.teams.index(team)+1)
+        # Removing team manager role.
+        logging.info(f"Deleting team member role.")
+        role = guild.get_role(team.manager_role_id)
+        await role.edit(reason="Trigger guild role event.")
+        await role.delete()
+      else:
+        pass
 
     # On guild remove event.
     @client.event

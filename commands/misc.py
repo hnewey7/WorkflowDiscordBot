@@ -28,8 +28,8 @@ async def help_command(command,client,workflow):
 
     embed.add_field(name="`!set_active_channel`", value=f"***Required {admin_role.mention}***\nSets the current channel to the active channel and displays all existing projects in the workflow. Allows the {admin_role.mention} to add, edit and delete projects and tasks.",inline=False)
     embed.add_field(name="`!teams`", value=f"***Required {admin_role.mention}***\nDisplays all existing teams on the server and allows the {admin_role.mention} to add, edit and delete teams.",inline=False)
-    embed.add_field(name="`!manage_projects`", value=f"***Required {admin_role.mention}***\nAllows teams to be selected and displays their existing projects. New projects can be assigned to the team and existing projects removed.",inline=False)
-    embed.add_field(name="`!manage_tasks`", value=f"***Required {manager_mentions}***Allows managers to select tasks and display team members assigned to the task. New members can be assigned to the task and existing members removed.",inline=False)
+    embed.add_field(name="`!manage_projects`", value=f"***Required {admin_role.mention} {manager_mentions}***Allows teams to be selected and displays their existing projects. New projects can be assigned to the team and existing projects removed.",inline=False)
+    embed.add_field(name="`!manage_tasks`", value=f"Allows managers to select tasks and display team members assigned to the task. New members can be assigned to the task and existing members removed.",inline=False)
 
     # Sending message.
     await channel.send(embed=embed,delete_after=300)

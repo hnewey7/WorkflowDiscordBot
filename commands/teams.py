@@ -192,11 +192,21 @@ class DelTeamModal(discord.ui.Modal,title="Delete Team"):
         # Deleting team from workflow.
         deleted_team = self.workflow.del_team(self.index_input.value)
         logger.info("Deleted team from workflow.")
-        # Removing role from guild.
-        await interaction.guild.get_role(deleted_team.role_id).delete()
-        logger.info(f"Deleted role, {deleted_team.title}")
-        await interaction.guild.get_role(deleted_team.manager_role_id).delete()
-        logger.info(f"Deleted manager role, {deleted_team.title}")
+
+        # Removing team role from guild.
+        try:
+          await interaction.guild.get_role(deleted_team.role_id).delete()
+          logger.info(f"Deleted role, {deleted_team.name}")
+        except:
+          logger.info(f"Role could not be deleted, {deleted_team.name}")
+        
+        # Removing team manager role from guild.
+        try:
+          await interaction.guild.get_role(deleted_team.manager_role_id).delete()
+          logger.info(f"Deleted manager role, {deleted_team.name}")
+        except:
+          logger.info(f"Role could not be deleted, {deleted_team.name}")
+
         await interaction.response.defer()
 
 
@@ -276,15 +286,17 @@ async def display_teams(command, workflow, client):
                 initial_check = False
                 # Waiting for either interaction or role update.
                 interaction_task = asyncio.create_task(client.wait_for('interaction'))
-                role_task = asyncio.create_task(client.wait_for('member_update'))
-                await asyncio.wait([interaction_task,role_task],return_when=asyncio.FIRST_COMPLETED)
+                member_task = asyncio.create_task(client.wait_for('member_update'))
+                role_task = asyncio.create_task(client.wait_for('guild_role_delete'))
+                await asyncio.wait([interaction_task,member_task,role_task],return_when=asyncio.FIRST_COMPLETED)
                 await asyncio.sleep(1)
             else:
                 # Waiting for either interaction or role update.
                 await message.edit(embed=embed,view=view,delete_after=300)
                 interaction_task = asyncio.create_task(client.wait_for('interaction'))
-                role_task = asyncio.create_task(client.wait_for('member_update'))
-                await asyncio.wait([interaction_task,role_task],return_when=asyncio.FIRST_COMPLETED)
+                member_task = asyncio.create_task(client.wait_for('member_update'))
+                role_task = asyncio.create_task(client.wait_for('guild_role_delete'))
+                await asyncio.wait([interaction_task,member_task,role_task],return_when=asyncio.FIRST_COMPLETED)
                 await asyncio.sleep(1)
 
     else:
