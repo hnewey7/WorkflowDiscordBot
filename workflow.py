@@ -193,9 +193,18 @@ class Task():
         self.status = "PENDING"
         self.priority = None
         self.archive = False
+        self.logs = {}
     
     def assign_member(self,member):
       self.member_ids.append(member.id)
+
+    def add_log(self,author,comment):
+      current_datetime = datetime.now().strftime("%H:%M:%S %d-%m-%Y")
+      log_info = [comment,author.id]
+      self.logs[current_datetime] = log_info
+
+    def remove_log(self,datetime):
+      del self.logs[datetime]
 
     def get_members(self,guild):
       members = []

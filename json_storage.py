@@ -127,6 +127,7 @@ async def convert_from_json(workflow_json, client):
         new_task.status = task['status']
         new_task.priority = task['priority']
         new_task.archive = task['archive']
+        new_task.logs = task['logs']
 
         logger.info(f"Loading task, {task_name} ({task_deadline}).")
     

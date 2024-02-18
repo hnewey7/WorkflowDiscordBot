@@ -79,6 +79,14 @@ class TaskSelectMenu(discord.ui.Select):
       else:
         description = "No members."
       embed.add_field(name="Current members:",value=description,inline=True)
+      # Adding log to message.
+      if len(task.logs.keys()) != 0:
+        log_list = ""
+        for log_date in task.logs.keys():
+          # Getting log author.
+          log_author = self.guild.get_member(task.logs[log_date][1])
+          log_list += f"`{log_date}` {task.logs[log_date][0]} {log_author.mention}\n"
+        embed.add_field(name="Log:",value=log_list,inline=False)
 
       view = IndividualTaskView(task,self.guild,self.client,self.workflow)
 
@@ -137,6 +145,13 @@ class IndividualTaskView(discord.ui.View):
     status_select.max_values = 1
     status_select.options = get_status_selection()
     return status_select
+  
+  def create_log_menu(self):
+    log_select = LogSelectMenu(self.task)
+    log_select.placeholder = "Status"
+    log_select.max_values = 1
+    log_select.options = get_log_selection(self.task)
+    return log_select
 
   @discord.ui.button(label="Change Description",style=discord.ButtonStyle.primary)
   async def change_description(self,interaction:discord.Interaction,button:discord.ui.Button):
@@ -177,7 +192,7 @@ class IndividualTaskView(discord.ui.View):
   async def finish_edit(self,interaction:discord.Interaction,button:discord.Button):
     self.close_check = True
 
-  @discord.ui.button(label="Assign Member",style=discord.ButtonStyle.primary,row=3)
+  @discord.ui.button(label="Assign Member",style=discord.ButtonStyle.primary,row=2)
   async def assign_member(self,interaction:discord.Interaction,button:discord.ui.Button):
     view = discord.ui.View()
     # Creating embed.
@@ -191,7 +206,7 @@ class IndividualTaskView(discord.ui.View):
     await self.client.wait_for("interaction")
     await interaction.delete_original_response()
 
-  @discord.ui.button(label="Remove Member",style=discord.ButtonStyle.primary,row=3)
+  @discord.ui.button(label="Remove Member",style=discord.ButtonStyle.primary,row=2)
   async def remove_member(self,interaction:discord.Interaction,button:discord.Button):
     view = discord.ui.View()
     # Creating embed.
@@ -205,6 +220,25 @@ class IndividualTaskView(discord.ui.View):
     await self.client.wait_for("interaction")
     await interaction.delete_original_response()
 
+  @discord.ui.button(label="Add Log", style=discord.ButtonStyle.primary,row=2)
+  async def add_log(self,interaction:discord.Interaction,button:discord.Button):
+    # Sending log modal.
+    await interaction.response.send_modal(AddLogModal(self.task))
+
+  @discord.ui.button(label="Remove Log", style=discord.ButtonStyle.primary,row=2)
+  async def remove_log(self,interaction:discord.Interaction,button:discord.Button):
+    view = discord.ui.View()
+    # Creating embed.
+    embed = discord.Embed(color=discord.Color.blurple(),description=f"Select a log to remove from the task:")
+    # Creating select menu.
+    select_menu = self.create_log_menu()
+    view.add_item(select_menu)
+    # Sending message.
+    await interaction.response.send_message(embed=embed,view=view)
+    # Deleting message after interaction.
+    await self.client.wait_for("interaction")
+    await interaction.delete_original_response()
+  
 
 class MemberSelectMenu(discord.ui.Select):
 
@@ -252,6 +286,19 @@ class StatusSelectMenu(discord.ui.Select):
     logger.info(f"Changed status of ({self.task.name}) to {self.values[0]}.")
     await interaction.response.defer()
 
+
+class LogSelectMenu(discord.ui.Select):
+
+  def __init__(self,task):
+    super().__init__()
+    self.task = task
+  
+  async def callback(self, interaction: discord.Interaction):
+    # Setting deleting selected log.
+    self.task.remove_log(self.values[0])
+    logger.info(f"Deleted log {self.values[0]} from {self.task.name}.")
+    await interaction.response.defer()
+
 # - - - - - - - - - - - - - - - - - - - - - -
     
 class DescriptionModal(discord.ui.Modal,title="Change Description"):
@@ -261,11 +308,25 @@ class DescriptionModal(discord.ui.Modal,title="Change Description"):
     self.task = task 
   
   # Requires description input.
-  description_input = discord.ui.TextInput(label="Please enter a new task description:",style=discord.TextStyle.long,placeholder="Description",required=False)
+  description_input = discord.ui.TextInput(label="Please enter a new task description:",style=discord.TextStyle.long,placeholder="Description",required=True)
 
   async def on_submit(self, interaction: discord.Interaction):
     # Changing description.
     self.task.change_description(self.description_input.value)
+    await interaction.response.defer()
+
+class AddLogModal(discord.ui.Modal,title="Add Log"):
+
+  def __init__(self,task):
+    super().__init__()
+    self.task = task 
+  
+  # Requires description input.
+  description_input = discord.ui.TextInput(label="Please enter a log comment:",style=discord.TextStyle.long,placeholder="Comment",required=True)
+
+  async def on_submit(self, interaction: discord.Interaction):
+    # Add log.
+    self.task.add_log(interaction.user,self.description_input.value)
     await interaction.response.defer()
 
 # - - - - - - - - - - - - - - - - - - - - - -
@@ -341,6 +402,14 @@ def get_status_selection():
   options = []
   for status in statuses:
     option = discord.SelectOption(label=status)
+    options.append(option)
+  return options
+
+def get_log_selection(task):
+  log_dates = task.logs.keys()
+  options = []
+  for date in log_dates:
+    option = discord.SelectOption(label=date)
     options.append(option)
   return options
 
