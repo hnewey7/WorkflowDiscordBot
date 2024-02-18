@@ -22,6 +22,7 @@ class TeamsButtonView(discord.ui.View):
         super().__init__()
         self.workflow = workflow
         self.client = client
+        self.close_check = False
     
     @discord.ui.button(label="Add Team", style=discord.ButtonStyle.primary)
     async def add_team(self, interaction: discord.Interaction, button: discord.ui.Button):
@@ -50,6 +51,11 @@ class TeamsButtonView(discord.ui.View):
         else:
             # Sending private message.
             await interaction.user.send("You do not have the necessary role to delete teams from the workflow.")
+
+    @discord.ui.button(label="Finish Edit",style=discord.ButtonStyle.success)
+    async def finish_edit(self, interaction: discord.Interaction, button: discord.ui.Button):
+      # Indicating to close message.
+      self.close_check = True
 
 
 class IndividualTeamButtonView(discord.ui.View):
@@ -298,6 +304,10 @@ async def display_teams(command, workflow, client):
                 role_task = asyncio.create_task(client.wait_for('guild_role_delete'))
                 await asyncio.wait([interaction_task,member_task,role_task],return_when=asyncio.FIRST_COMPLETED)
                 await asyncio.sleep(1)
+
+            if view.close_check:
+              await message.delete()
+              break
 
     else:
         logger.info("User does not have necessary permission.")
