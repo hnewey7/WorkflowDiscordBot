@@ -23,18 +23,19 @@ logger = logging.getLogger()
     
 class TaskSelectMenu(discord.ui.Select):
 
-  def __init__(self,command,workflow,client):
+  def __init__(self,command,workflow,client,manager_check):
     super().__init__()
     self.command = command
     self.guild = command.guild
     self.workflow = workflow
     self.client = client
+    self.manager_check = manager_check
 
   async def callback(self, interaction: discord.Interaction):
     async_tasks = []
     async_tasks.append(asyncio.create_task(self.proceed_task(interaction)))
     # Getting tasks from selected task.
-    available_tasks = get_available_tasks(self.command,self.workflow)
+    available_tasks = get_available_tasks(self.command,self.workflow,self.manager_check)
     selected_tasks = []
     for selected_task in self.values:
       for available_task in available_tasks:
@@ -88,16 +89,17 @@ class TaskSelectMenu(discord.ui.Select):
           log_list += f"`{log_date}` {task.logs[log_date][0]} {log_author.mention}\n"
         embed.add_field(name="Log:",value=log_list,inline=False)
 
-      view = IndividualTaskView(task,self.guild,self.client,self.workflow)
-
-      # Toggling buttons.
-      available_members = get_member_selection(task,self.workflow,self.guild,True)
-      if len(available_members) == 0:
-        view.assign_member.disabled = True
-
-      available_members = get_member_selection(task,self.workflow,self.guild,False)
-      if len(available_members) == 0:
-        view.remove_member.disabled = True
+      if self.manager_check:
+        view = ManagerIndividualTaskView(task,self.guild,self.client,self.workflow,self.command.author)
+        # Toggling buttons.
+        available_members = get_member_selection(task,self.workflow,self.guild,True)
+        if len(available_members) == 0:
+          view.assign_member.disabled = True
+        available_members = get_member_selection(task,self.workflow,self.guild,False)
+        if len(available_members) == 0:
+          view.remove_member.disabled = True
+      else:
+        view = MemberIndividualTaskView(task,self.guild,self.client,self.workflow,self.command.author)
 
       if initial_check:
         message = await self.command.channel.send(embed=embed,view=view,delete_after=300)
@@ -113,15 +115,16 @@ class TaskSelectMenu(discord.ui.Select):
         break
 
 
-class IndividualTaskView(discord.ui.View):
+class ManagerIndividualTaskView(discord.ui.View):
 
-  def __init__(self,task,guild,client,workflow):
+  def __init__(self,task,guild,client,workflow,author):
     super().__init__()
     self.task = task
     self.guild = guild
     self.client = client
     self.close_check = False
     self.workflow = workflow
+    self.author = author
 
   def create_member_menu(self,menu_type:bool):
     # Getting available members.
@@ -150,7 +153,7 @@ class IndividualTaskView(discord.ui.View):
     log_select = LogSelectMenu(self.task)
     log_select.placeholder = "Status"
     log_select.max_values = 1
-    log_select.options = get_log_selection(self.task)
+    log_select.options = get_log_selection(self.task,self.author,True)
     return log_select
 
   @discord.ui.button(label="Change Description",style=discord.ButtonStyle.primary)
@@ -238,6 +241,54 @@ class IndividualTaskView(discord.ui.View):
     # Deleting message after interaction.
     await self.client.wait_for("interaction")
     await interaction.delete_original_response()
+
+
+class MemberIndividualTaskView(discord.ui.View):
+
+  def __init__(self,task,guild,client,workflow,author):
+    super().__init__()
+    self.task = task
+    self.guild = guild
+    self.client = client
+    self.close_check = False
+    self.workflow = workflow
+    self.author = author
+
+  def create_log_menu(self):
+    log_select = LogSelectMenu(self.task)
+    log_select.placeholder = "Status"
+    log_select.max_values = 1
+    log_select.options = get_log_selection(self.task,self.author,False)
+    return log_select
+
+  @discord.ui.button(label="Request Approval", style=discord.ButtonStyle.primary)
+  async def request_approval(self,interaction:discord.Interaction,button:discord.Button):
+    # Setting task status.
+    self.task.status = "APPROVAL PENDING"
+    await interaction.response.defer()
+
+  @discord.ui.button(label="Add Log", style=discord.ButtonStyle.primary)
+  async def add_log(self,interaction:discord.Interaction,button:discord.Button):
+    # Sending log modal.
+    await interaction.response.send_modal(AddLogModal(self.task))
+
+  @discord.ui.button(label="Remove Log", style=discord.ButtonStyle.primary)
+  async def remove_log(self,interaction:discord.Interaction,button:discord.Button):
+    view = discord.ui.View()
+    # Creating embed.
+    embed = discord.Embed(color=discord.Color.blurple(),description=f"Select a log to remove from the task:")
+    # Creating select menu.
+    select_menu = self.create_log_menu()
+    view.add_item(select_menu)
+    # Sending message.
+    await interaction.response.send_message(embed=embed,view=view)
+    # Deleting message after interaction.
+    await self.client.wait_for("interaction")
+    await interaction.delete_original_response()
+
+  @discord.ui.button(label="Finish Edit",style=discord.ButtonStyle.success)
+  async def finish_edit(self,interaction:discord.Interaction,button:discord.Button):
+    self.close_check = True
   
 
 class MemberSelectMenu(discord.ui.Select):
@@ -331,14 +382,20 @@ class AddLogModal(discord.ui.Modal,title="Add Log"):
 
 # - - - - - - - - - - - - - - - - - - - - - -
 
-def get_available_tasks(command,workflow):
+def get_available_tasks(command,workflow,manager_check):
   user = command.author
   # Getting teams from the user's roles.
   teams = []
-  for role in user.roles:
-    for team in workflow.teams:
-      if role.id == team.manager_role_id:
-        teams.append(team)
+  if manager_check:
+    for role in user.roles:
+      for team in workflow.teams:
+        if role.id == team.manager_role_id:
+          teams.append(team)
+  else:
+    for role in user.roles:
+      for team in workflow.teams:
+        if role.id == team.role_id:
+          teams.append(team)
   # Getting project ids from all teams.
   project_ids = []
   for team in teams:
@@ -351,10 +408,16 @@ def get_available_tasks(command,workflow):
     projects.append(workflow.get_project_by_id(project_id))
   # Getting tasks from projects.
   available_tasks = []
-  for project in projects:
-    for task in project.tasks:
-      if not task.archive:
-        available_tasks.append(task)
+  if manager_check:
+    for project in projects:
+      for task in project.tasks:
+        if not task.archive:
+          available_tasks.append(task)
+  else:
+    for project in projects:
+      for task in project.tasks:
+        if user.id in task.member_ids and not task.archive:
+          available_tasks.append(task)
   return available_tasks
 
 def create_task_options(tasks):
@@ -405,12 +468,17 @@ def get_status_selection():
     options.append(option)
   return options
 
-def get_log_selection(task):
+def get_log_selection(task,author,manager_check):
   log_dates = task.logs.keys()
   options = []
   for date in log_dates:
-    option = discord.SelectOption(label=date)
-    options.append(option)
+    if manager_check:
+      option = discord.SelectOption(label=date)
+      options.append(option)
+    else:
+      if task.logs[date][1] == author.id:
+        option = discord.SelectOption(label=date)
+        options.append(option)
   return options
 
 # - - - - - - - - - - - - - - - - - - - - - -
@@ -423,8 +491,8 @@ async def manage_tasks(command,client,workflow):
     embed = discord.Embed(color=discord.Color.blurple(),description="Please select a task to manage:")
     view = discord.ui.View()
     # Creating select menu.
-    task_select_menu = TaskSelectMenu(command,workflow,client)
-    available_tasks = get_available_tasks(command,workflow)
+    task_select_menu = TaskSelectMenu(command,workflow,client,True)
+    available_tasks = get_available_tasks(command,workflow,True)
     available_task_options = create_task_options(available_tasks)
     if len(available_tasks) != 0:
       task_select_menu.placeholder = "Tasks"
@@ -437,5 +505,22 @@ async def manage_tasks(command,client,workflow):
       embed = discord.Embed(color=discord.Color.blurple(),description="No tasks to manage.")
       await channel.send(embed=embed,delete_after=300)
   else:
-    # Sending private message.
-    await command.author.send("You do not have the necessary role to manage tasks.")
+    logger.info("Command request approved.")
+    channel = command.channel
+    # Creating embed and view.
+    embed = discord.Embed(color=discord.Color.blurple(),description="Please select a task to manage:")
+    view = discord.ui.View()
+    # Creating select menu.
+    task_select_menu = TaskSelectMenu(command,workflow,client,False)
+    available_tasks = get_available_tasks(command,workflow,False)
+    available_task_options = create_task_options(available_tasks)
+    if len(available_tasks) != 0:
+      task_select_menu.placeholder = "Tasks"
+      task_select_menu.max_values = len(available_tasks)
+      task_select_menu.options = available_task_options
+      view.add_item(task_select_menu)
+      # Sending  message to channel.
+      await channel.send(embed=embed,view=view,delete_after=300)
+    else:
+      embed = discord.Embed(color=discord.Color.blurple(),description="No tasks to manage.")
+      await channel.send(embed=embed,delete_after=300)

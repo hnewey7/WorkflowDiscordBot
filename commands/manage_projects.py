@@ -21,7 +21,7 @@ import logging
 
 from discord.interactions import Interaction
 from .misc import get_admin_role, check_team_manager, get_projects_for_member
-from .manage_task import IndividualTaskView,get_member_selection
+from .manage_task import ManagerIndividualTaskView,get_member_selection
 
 # - - - - - - - - - - - - - - - - - -
 
@@ -561,7 +561,7 @@ async def send_edit_task_message(task,guild,client,workflow,command):
         log_list += f"`{log_date}` {task.logs[log_date][0]} {log_author.mention}\n"
       embed.add_field(name="Log:",value=log_list,inline=False)
 
-    view = IndividualTaskView(task,guild,client,workflow)
+    view = ManagerIndividualTaskView(task,guild,client,workflow,command.author)
 
     # Toggling buttons.
     available_members = get_member_selection(task,workflow,guild,True)
