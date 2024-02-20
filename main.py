@@ -206,9 +206,15 @@ def init_commands(client,tree):
     await commands.help_command(interaction,workflows[str(interaction.guild.id)])
   
   @tree.command(name="set_active_channel",description="Sets the current channel to the active channel and displays all existing projects in the workflow.")
+  @discord.app_commands.checks.has_role("Workflow Manager")
   async def set_active_channel_command(interaction):
     logger.info("Requesting set active channel command.")
     await commands.set_active_channel_command(interaction,workflows[str(interaction.guild.id)],client)
+  
+  @set_active_channel_command.error
+  async def on_set_active_channel_error(interaction: discord.Interaction, error: discord.app_commands.AppCommandError):
+     if isinstance(error, discord.app_commands.MissingRole):
+        await interaction.response.send_message("You do not have the necessary role to use this command.")
   
   @tree.command(name="disconnect",description="Disconnects the bot and saves data to JSON.")
   async def disconnect(interaction):
