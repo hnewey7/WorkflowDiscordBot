@@ -6,6 +6,7 @@ Created on Monday 5th February 2024.
 
 '''
 
+import discord
 import logging
 import json
 from workflow import Workflow

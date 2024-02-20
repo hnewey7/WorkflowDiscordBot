@@ -28,7 +28,7 @@ def init_commands(logging):
 async def evaluate_command(command, client, workflow):
     if "help" == command.content[1:]:
         logger.info("Requesting help command.")
-        await help_command(command,client,workflow)
+        await help_command(command.channel,command.guild,workflow)
         await command.delete()
     if "set_active_channel" == command.content[1:]:
         logger.info("Requesting set active channel.")

@@ -40,10 +40,15 @@ def init_client(token):
     logger.info("- - - - - - - - - - - - - - - - - - - - - -")
     # Initialising and running client.
     client = discord.Client(intents=intents)
+    tree = discord.app_commands.CommandTree(client)
 
     # Initialising events.
-    init_events(client)
+    init_events(client,tree)
     logger.info("Initialising events.")
+
+    # Initialising commands.
+    init_commands(client,tree)
+    logger.info("Initialising commands.")
 
     logger.info("Running client.")
     logger.info("- - - - - - - - - - - - - - - - - - - - - -")
@@ -52,9 +57,10 @@ def init_client(token):
     return client
 
 
-def init_events(client):
+def init_events(client,tree):
     global temp_client
     temp_client = client
+
 
     # On connect event.
     @client.event
@@ -177,13 +183,37 @@ def init_events(client):
         logger.info(f"Message sent in {message.guild.name} {message.channel.name}.")
         if len(message.content) > 0 and message.content[0] == "!":
             logger.info(f"Command requested in {message.guild.name} {message.channel.name}.")
-            await commands.evaluate_command(message,temp_client,workflows[str(message.guild.id)])
+            await commands.evaluate_command(message,temp_client,workflows[str(message.guild.id)],tree)
 
     # On disconnect event.
     @client.event
     async def on_disconnect():
       # Saving data to json.
       save_to_json(workflows)
+
+    @client.event
+    async def on_ready():
+      logger.info("Starting command tree syncing.")
+      await tree.sync()
+      logger.info("Finished command tree syncing.")
+
+
+def init_commands(client,tree):
+
+  @tree.command(name="help",description="Provides a list of commands that can be used with the Workflow Bot.")
+  async def help_command(interaction):
+    logger.info("Requesting help command.")
+    await commands.help_command(interaction,workflows[str(interaction.guild.id)])
+  
+  @tree.command(name="set_active_channel",description="Sets the current channel to the active channel and displays all existing projects in the workflow.")
+  async def set_active_channel_command(interaction):
+    logger.info("Requesting set active channel command.")
+    await commands.set_active_channel_command(interaction,workflows[str(interaction.guild.id)],client)
+  
+  @tree.command(name="disconnect",description="Disconnects the bot and saves data to JSON.")
+  async def disconnect(interaction):
+    logger.info("Requesting disconnect command.")
+    await commands.disconnect_command(client)
 
 async def init_saved(client):
     # Loading workflows dictionary.

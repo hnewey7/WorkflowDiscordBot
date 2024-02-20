@@ -10,14 +10,15 @@ import logging
 import discord
 
 # Help command.
-async def help_command(command,client,workflow):
-    # Getting channel.
-    channel = command.channel
+async def help_command(interaction,workflow):
+    # Getting channel and guild.
+    channel = interaction.channel
+    guild = interaction.guild
     # Creating embed.
     embed = discord.Embed(colour=discord.Colour.blurple(),title="Help",description="Available commands to use with the Workflow Bot:")
     # Creating fields for each command.
-    admin_role = await get_admin_role(command.guild)
-    manager_roles = get_team_manager_roles(command.guild,workflow)
+    admin_role = await get_admin_role(guild)
+    manager_roles = get_team_manager_roles(guild,workflow)
 
     # Creating team manager mentions.
     manager_mentions = ""
@@ -32,7 +33,7 @@ async def help_command(command,client,workflow):
     embed.add_field(name="`!manage_tasks`", value=f"Allows managers to select tasks and display team members assigned to the task. New members can be assigned to the task and existing members removed.",inline=False)
 
     # Sending message.
-    await channel.send(embed=embed,delete_after=300)
+    await interaction.response.send_message(embed=embed,delete_after=300)
 
 # Disconnect command.
 async def disconnect_command(client):

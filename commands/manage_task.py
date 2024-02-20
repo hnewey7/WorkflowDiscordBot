@@ -41,14 +41,17 @@ class TaskSelectMenu(discord.ui.Select):
       for available_task in available_tasks:
         if selected_task == available_task.name:
           selected_tasks.append(available_task)
-    # Creating tasks for each selected task.
-    for task in selected_tasks:
-      async_tasks.append(asyncio.create_task(self.send_task_message(task)))
+    # Creating send all task.
+    async_tasks.append(asyncio.create_task(self.send_all_tasks(selected_tasks)))
     await asyncio.wait(async_tasks,return_when=asyncio.ALL_COMPLETED)
     await interaction.delete_original_response()
 
   async def proceed_task(self,interaction:discord.Interaction):
     await interaction.response.defer()
+
+  async def send_all_tasks(self,selected_tasks):
+    for task in selected_tasks:
+      await self.send_task_message(task)
 
   async def send_task_message(self,task):
     initial_check = True

@@ -49,15 +49,17 @@ class ProjectSelectMenu(discord.ui.Select):#
       for available_project in available_projects:
         if selected_project == available_project.name:
           selected_projects.append(available_project)
-    # Creating tasks for each selected project.
-    for project in selected_projects:
-      async_tasks.append(asyncio.create_task(self.send_project_message(project)))
+    async_tasks.append(asyncio.create_task(self.send_all_projects(selected_projects)))
     await asyncio.wait(async_tasks,return_when=asyncio.ALL_COMPLETED)
     await interaction.delete_original_response()
 
   async def proceed_task(self,interaction:discord.Interaction):
     await interaction.response.defer()
   
+  async def send_all_projects(self,selected_projects):
+    for project in selected_projects:
+      await self.send_project_message(project)
+
   async def send_project_message(self,project):
     initial_check = True
     archive_check = False

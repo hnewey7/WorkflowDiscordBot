@@ -322,24 +322,21 @@ def init_active_channel(logging):
 
 
 # Set projects command.
-async def set_active_channel_command(command, workflow, client):
-    # Deleting user message.
-    await command.delete()
-
+async def set_active_channel_command(interaction, workflow, client):
     # Getting channel and guild of command was sent in.
-    channel = command.channel
-    guild = command.guild
+    channel = interaction.channel
+    guild = interaction.guild
 
     # Updating projects channel in workflow.
-    workflow.active_channel = command.channel
+    workflow.active_channel = channel
 
     # Getting workflow manager role.
     admin_role = await get_admin_role(guild)
 
     # Changing permissions for channel.
-    await channel.set_permissions(command.guild.default_role,send_messages=False,add_reactions=False,manage_messages=False)
+    await channel.set_permissions(guild.default_role,send_messages=False,add_reactions=False,manage_messages=False)
     await channel.set_permissions(admin_role,send_messages=True,add_reactions=False,manage_messages=True)
-    logger.info(f"Setting {channel.name} to project channel in {command.guild.name}.")
+    logger.info(f"Setting {channel.name} to project channel in {guild.name}.")
 
     # Registering initial check.
     initial_check = True
@@ -387,12 +384,14 @@ async def set_active_channel_command(command, workflow, client):
 
         # Updating message.
         if initial_check:
-            message = await command.channel.send(embed=embed,view=view)
-            workflow.active_message = message
+            await interaction.response.send_message(embed=embed,view=view)
+            response = await interaction.original_response()
+            response_message = await response.fetch()
+            workflow.active_message = response_message
             initial_check = False
             await client.wait_for('interaction')
         else:
-            await message.edit(embed=embed,view=view)
+            await interaction.edit_original_response(embed=embed,view=view)
             await client.wait_for('interaction')
 
            
