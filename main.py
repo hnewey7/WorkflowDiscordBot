@@ -200,6 +200,16 @@ def init_events(client,tree):
 
 def init_commands(client,tree):
 
+  def is_developer():
+    def predicate(interaction: discord.Interaction) -> bool:
+      return interaction.user.id == 449461280437436416
+    return discord.app_commands.check(predicate)
+
+  def is_team_manager():
+    def predicate(interaction: discord.Interaction) -> bool:
+      return commands.misc.check_team_manager(interaction.user,interaction.guild,workflows[str(interaction.guild.id)])
+    return discord.app_commands.check(predicate)
+
   @tree.command(name="help",description="Provides a list of commands that can be used with the Workflow Bot.")
   async def help_command(interaction):
     logger.info("Requesting help command.")
@@ -215,8 +225,20 @@ def init_commands(client,tree):
   async def on_set_active_channel_error(interaction: discord.Interaction, error: discord.app_commands.AppCommandError):
      if isinstance(error, discord.app_commands.MissingRole):
         await interaction.response.send_message("You do not have the necessary role to use this command.")
+
+  @tree.command(name="teams",description="Displays all existing teams on the server and allows adding, editing and deleting teams.")
+  @discord.app_commands.checks.has_role("Workflow Manager")
+  async def teams_command(interaction):
+    logger.info("Requesting teams command.")
+    await commands.display_teams(interaction,workflows[str(interaction.guild.id)],client)
   
+  @teams_command.error
+  async def on_teams_error(interaction: discord.Interaction, error: discord.app_commands.AppCommandError):
+    if isinstance(error, discord.app_commands.MissingRole):
+        await interaction.response.send_message("You do not have the necessary role to use this command.")
+
   @tree.command(name="disconnect",description="Disconnects the bot and saves data to JSON.")
+  @is_developer()
   async def disconnect(interaction):
     logger.info("Requesting disconnect command.")
     await commands.disconnect_command(client)

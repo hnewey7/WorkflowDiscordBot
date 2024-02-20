@@ -32,6 +32,7 @@ class TeamsButtonView(discord.ui.View):
         else:
             # Sending private message.
             await interaction.user.send("You do not have the necessary role to add teams to the workflow.")
+            await interaction.response.defer()
 
     @discord.ui.button(label="Edit Team", style=discord.ButtonStyle.primary)
     async def edit_team(self, interaction: discord.Interaction, button: discord.ui.Button):
@@ -41,6 +42,7 @@ class TeamsButtonView(discord.ui.View):
         else:
             # Sending private message.
             await interaction.user.send("You do not have the necessary role to edit teams to the workflow.")
+            await interaction.response.defer()
 
 
     @discord.ui.button(label="Delete Team", style=discord.ButtonStyle.primary)
@@ -51,11 +53,17 @@ class TeamsButtonView(discord.ui.View):
         else:
             # Sending private message.
             await interaction.user.send("You do not have the necessary role to delete teams from the workflow.")
+            await interaction.response.defer()
 
     @discord.ui.button(label="Finish Edit",style=discord.ButtonStyle.success)
     async def finish_edit(self, interaction: discord.Interaction, button: discord.ui.Button):
-      # Indicating to close message.
-      self.close_check = True
+      if await get_admin_role(interaction.guild) in interaction.user.roles:
+        # Indicating to close message.
+        self.close_check = True
+      else:
+        # Sending private message.
+        await interaction.user.send("You do not have the necessary role to delete teams from the workflow.")
+        await interaction.response.defer()
 
 
 class IndividualTeamButtonView(discord.ui.View):
@@ -76,6 +84,7 @@ class IndividualTeamButtonView(discord.ui.View):
         else:
             # Sending private message.
             await interaction.user.send("You do not have the necessary role to change the title of the team.")
+            await interaction.response.defer()
 
     @discord.ui.button(label="Finish Edit",style=discord.ButtonStyle.success)
     async def finish_edit(self, interaction: discord.Interaction, button: discord.ui.Button):
@@ -85,6 +94,7 @@ class IndividualTeamButtonView(discord.ui.View):
         else:
             # Sending private message.
             await interaction.user.send("You do not have the necessary role to finish the edit on the team.")
+            await interaction.response.defer()
 
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -240,75 +250,70 @@ class ChangeTitleModal(discord.ui.Modal,title="Change Title"):
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-async def display_teams(command, workflow, client):
+async def display_teams(interaction, workflow, client):
     global logger
     logger = logging.getLogger()
 
     # Getting guild.
-    guild = command.guild
+    guild = interaction.guild
     
-    if await get_admin_role(guild) in command.author.roles:
-        logger.info("Command request approved.")
-        initial_check = True
-        # Sending teams embed.
-        while True:
-            # Creating embed for message.
-            embed = discord.Embed(color=discord.Color.blurple(),title="Teams")  
+    logger.info("Command request approved.")
+    initial_check = True
+    # Sending teams embed.
+    while True:
+        # Creating embed for message.
+        embed = discord.Embed(color=discord.Color.blurple(),title="Teams")  
 
-            # Creating content of message.
-            if len(workflow.teams) != 0:
-                for team in workflow.teams:
-                    # Getting roles from team's role id.
-                    team_role = guild.get_role(team.role_id)
-                    manager_role = guild.get_role(team.manager_role_id)
-                    while True:
-                        if team_role == None:
-                            team_role = guild.get_role(team.role_id)
-                            manager_role = guild.get_role(team.manager_role_id)
-                            await asyncio.sleep(0.2)
-                        else:
-                            break
-                    # Creating task list for field.
-                    member_list = f"**{workflow.teams.index(team)+1}.{team_role.mention}**\n"
-                    if len(team_role.members) != 0:
-                        for member in team_role.members:
-                            member_list += f'- {member.name} - **Manager**\n' if member in manager_role.members else \
-                        f'- {member.name}\n'
+        # Creating content of message.
+        if len(workflow.teams) != 0:
+            for team in workflow.teams:
+                # Getting roles from team's role id.
+                team_role = guild.get_role(team.role_id)
+                manager_role = guild.get_role(team.manager_role_id)
+                while True:
+                    if team_role == None:
+                        team_role = guild.get_role(team.role_id)
+                        manager_role = guild.get_role(team.manager_role_id)
+                        await asyncio.sleep(0.2)
                     else:
-                        member_list += "No members."
-                    embed.add_field(name="",value=member_list,inline=False)
-            else:
-                embed.description = 'No existing teams.'
-            
-            # Creating button view.
-            view = TeamsButtonView(workflow,client)
-            if len(workflow.teams) == 0:  
-                view.edit_team.disabled = True
-                view.delete_team.disabled = True
+                        break
+                # Creating task list for field.
+                member_list = f"**{workflow.teams.index(team)+1}.{team_role.mention}**\n"
+                if len(team_role.members) != 0:
+                    for member in team_role.members:
+                        member_list += f'- {member.name} - **Manager**\n' if member in manager_role.members else \
+                    f'- {member.name}\n'
+                else:
+                    member_list += "No members."
+                embed.add_field(name="",value=member_list,inline=False)
+        else:
+            embed.description = 'No existing teams.'
+        
+        # Creating button view.
+        view = TeamsButtonView(workflow,client)
+        if len(workflow.teams) == 0:  
+            view.edit_team.disabled = True
+            view.delete_team.disabled = True
 
-            # Updating message.
-            if initial_check:
-                message = await command.channel.send(embed=embed,view=view,delete_after=300)
-                initial_check = False
-                # Waiting for either interaction or role update.
-                interaction_task = asyncio.create_task(client.wait_for('interaction'))
-                member_task = asyncio.create_task(client.wait_for('member_update'))
-                role_task = asyncio.create_task(client.wait_for('guild_role_delete'))
-                await asyncio.wait([interaction_task,member_task,role_task],return_when=asyncio.FIRST_COMPLETED)
-                await asyncio.sleep(1)
-            else:
-                # Waiting for either interaction or role update.
-                await message.edit(embed=embed,view=view,delete_after=300)
-                interaction_task = asyncio.create_task(client.wait_for('interaction'))
-                member_task = asyncio.create_task(client.wait_for('member_update'))
-                role_task = asyncio.create_task(client.wait_for('guild_role_delete'))
-                await asyncio.wait([interaction_task,member_task,role_task],return_when=asyncio.FIRST_COMPLETED)
-                await asyncio.sleep(1)
+        # Updating message.
+        if initial_check:
+            await interaction.response.send_message(embed=embed,view=view,delete_after=300)
+            initial_check = False
+            # Waiting for either interaction or role update.
+            interaction_task = asyncio.create_task(client.wait_for('interaction'))
+            member_task = asyncio.create_task(client.wait_for('member_update'))
+            role_task = asyncio.create_task(client.wait_for('guild_role_delete'))
+            await asyncio.wait([interaction_task,member_task,role_task],return_when=asyncio.FIRST_COMPLETED)
+            await asyncio.sleep(1)
+        else:
+            # Waiting for either interaction or role update.
+            await interaction.edit_original_response(embed=embed,view=view)
+            interaction_task = asyncio.create_task(client.wait_for('interaction'))
+            member_task = asyncio.create_task(client.wait_for('member_update'))
+            role_task = asyncio.create_task(client.wait_for('guild_role_delete'))
+            await asyncio.wait([interaction_task,member_task,role_task],return_when=asyncio.FIRST_COMPLETED)
+            await asyncio.sleep(1)
 
-            if view.close_check:
-              await message.delete()
-              break
-
-    else:
-        logger.info("User does not have necessary permission.")
-        command.author.send("You do not have the necessary role to use this command.")
+        if view.close_check:
+          await interaction.delete_original_response()
+          break
