@@ -43,7 +43,7 @@ class WorkflowButtonView(discord.ui.View):
         # Checking if user is admin role.
         if admin_role in interaction.user.roles:
             # Sending edit project modal.
-            await interaction.response.send_modal(EditProjectModal(workflow=self.workflow,client=self.client))
+            await interaction.response.send_modal(EditProjectModal(workflow=self.workflow,client=self.client,user=interaction.user))
         else:
             # Sending private message.
             await interaction.user.send("You do not have the necessary role to edit projects in the workflow.")
@@ -65,18 +65,17 @@ class WorkflowButtonView(discord.ui.View):
 
 class ProjectButtonView(discord.ui.View):
 
-    def __init__(self, project):
+    def __init__(self, project,user):
         super().__init__()
         self.project = project
         self.close_check = False
+        self.user = user
 
 
     @discord.ui.button(label="Change Title", style=discord.ButtonStyle.primary)
     async def change_title(self, interaction: discord.Interaction, button: discord.ui.Button):
-        # Getting admin role.
-        admin_role = await get_admin_role(interaction.guild)
-        # Checking if user is admin role.
-        if admin_role in interaction.user.roles:
+        # Checking if user is previous user.
+        if self.user.id == interaction.user.id:
             # Sending edit title modal.
             await interaction.response.send_modal(EditTitleModal(project=self.project))
         else:
@@ -86,10 +85,8 @@ class ProjectButtonView(discord.ui.View):
 
     @discord.ui.button(label="Change Deadline", style=discord.ButtonStyle.primary)
     async def change_deadline(self, interaction: discord.Interaction, button: discord.ui.Button):
-        # Getting admin role.
-        admin_role = await get_admin_role(interaction.guild)
-        # Checking if user is admin role.
-        if admin_role in interaction.user.roles:
+        # Checking if user is previous user.
+        if self.user.id == interaction.user.id:
             # Sending edit deadline modal.
             await interaction.response.send_modal(EditDeadlineModal(project=self.project))
         else:
@@ -99,10 +96,8 @@ class ProjectButtonView(discord.ui.View):
     
     @discord.ui.button(label="Finish Edit",style=discord.ButtonStyle.success)
     async def finish_edit(self, interaction: discord.Interaction, button: discord.ui.Button):
-        # Getting admin role.
-        admin_role = await get_admin_role(interaction.guild)
-        # Checking if user is admin role.
-        if admin_role in interaction.user.roles:
+        # Checking if user is previous user.
+        if self.user.id == interaction.user.id:
             # Indicating to close message.
             self.close_check = True
         else:
@@ -112,10 +107,8 @@ class ProjectButtonView(discord.ui.View):
 
     @discord.ui.button(label="Add Task", style=discord.ButtonStyle.primary,row=2)
     async def add_task(self, interaction: discord.Interaction, button: discord.ui.Button):
-        # Getting admin role.
-        admin_role = await get_admin_role(interaction.guild)
-        # Checking if user is admin role.
-        if admin_role in interaction.user.roles:
+        # Checking if user is previous user.
+        if self.user.id == interaction.user.id:
             # Sending add task modal.
             await interaction.response.send_modal(AddTaskModal(project=self.project))
         else:
@@ -125,10 +118,8 @@ class ProjectButtonView(discord.ui.View):
 
     @discord.ui.button(label="Delete Task", style=discord.ButtonStyle.primary,row=2)
     async def del_task(self, interaction: discord.Interaction, button: discord.ui.Button):
-        # Getting admin role.
-        admin_role = await get_admin_role(interaction.guild)
-        # Checking if user is admin role.
-        if admin_role in interaction.user.roles:
+        # Checking if user is previous user.
+        if self.user.id == interaction.user.id:
             # Sending delete task modal.
             await interaction.response.send_modal(DelTaskModal(project=self.project))
         else:
@@ -160,10 +151,11 @@ class AddProjectModal(discord.ui.Modal,title="New Project"):
 
 class EditProjectModal(discord.ui.Modal,title="Edit Project"):
 
-    def __init__(self,workflow,client):
+    def __init__(self,workflow,client,user):
         super().__init__()
         self.workflow = workflow
         self.client = client
+        self.user = user
 
     # Requires project number to edit.
     number_input = discord.ui.TextInput(label="Please enter a project number:",style=discord.TextStyle.short,placeholder="Number",required=True,max_length=2)
@@ -201,7 +193,7 @@ class EditProjectModal(discord.ui.Modal,title="Edit Project"):
             # Creating embed.
             embed = discord.Embed(color=discord.Color.blurple(),title=title,description=task_list)
             # Creating view.
-            view = ProjectButtonView(project=project)
+            view = ProjectButtonView(project=project,user=self.user)
             if len(project.tasks) == 0:
                 view.del_task.disabled = True
             # Checking if initial message.

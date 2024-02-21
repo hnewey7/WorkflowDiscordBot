@@ -20,7 +20,7 @@ import asyncio
 import logging
 
 from discord.interactions import Interaction
-from .misc import get_admin_role, check_team_manager, get_projects_for_member
+from .misc import get_admin_role, check_team_manager, get_projects_for_member, check_team_manager_project
 from .manage_task import ManagerIndividualTaskView,get_member_selection
 
 # - - - - - - - - - - - - - - - - - -
@@ -30,7 +30,7 @@ logger = logging.getLogger()
 
 # - - - - - - - - - - - - - - - - - -
 
-class ProjectSelectMenu(discord.ui.Select):#
+class ProjectSelectMenu(discord.ui.Select):
 
   def __init__(self,workflow,command,client):
     super().__init__()
@@ -38,20 +38,30 @@ class ProjectSelectMenu(discord.ui.Select):#
     self.command = command
     self.guild = command.guild
     self.client = client
+    self.user = command.user
 
   async def callback(self, interaction: discord.Interaction):
-    async_tasks = []
-    async_tasks.append(asyncio.create_task(self.proceed_task(interaction)))
-    # Getting project from selected project.
-    available_projects = self.workflow.projects
-    selected_projects = []
-    for selected_project in self.values:
-      for available_project in available_projects:
-        if selected_project == available_project.name:
-          selected_projects.append(available_project)
-    async_tasks.append(asyncio.create_task(self.send_all_projects(selected_projects)))
-    await asyncio.wait(async_tasks,return_when=asyncio.ALL_COMPLETED)
-    await interaction.delete_original_response()
+    if self.user.id == interaction.user.id:
+      async_tasks = []
+      async_tasks.append(asyncio.create_task(self.proceed_task(interaction)))
+      # Getting project from selected project.
+      available_projects = self.workflow.projects
+      selected_projects = []
+      for selected_project in self.values:
+        for available_project in available_projects:
+          if selected_project == available_project.name:
+            selected_projects.append(available_project)
+      async_tasks.append(asyncio.create_task(self.send_all_projects(selected_projects)))
+      await asyncio.wait(async_tasks,return_when=asyncio.ALL_COMPLETED)
+      await interaction.delete_original_response()
+    elif self.user.id == interaction.user.id and (await get_admin_role(interaction.guild) in interaction.user.roles or check_team_manager(interaction.user,interaction.guild,self.workflow)):
+      # Sending private message.
+      await interaction.user.send("Please use `/manage_projects` to generate your own project selection.")
+      await interaction.response.defer()
+    else:
+      # Sending private message.
+      await interaction.user.send("You do not have the necessary permission to manage a project.")
+      await interaction.response.defer()
 
   async def proceed_task(self,interaction:discord.Interaction):
     await interaction.response.defer()
@@ -105,7 +115,7 @@ class ProjectSelectMenu(discord.ui.Select):#
       embed.add_field(name="Tasks:",value=task_list,inline=False)
 
       # Creating relevant view.
-      if await get_admin_role(self.guild) in self.command.author.roles:
+      if await get_admin_role(self.guild) in self.command.user.roles:
         view = WorkflowManagerIndividualProjectView(project,self.workflow,self.client,self.guild,self.command)
         # Toggling buttons.
         available_teams = get_team_selection(project,self.workflow,True)
@@ -162,6 +172,8 @@ class ProjectSelectMenu(discord.ui.Select):#
         await message.edit(embed=embed,view=view,delete_after=300)
         await self.client.wait_for("interaction")
 
+      await asyncio.sleep(0.5)
+
       # Checking to close message.
       if view.close_check:
         await message.delete()
@@ -189,127 +201,193 @@ class WorkflowManagerIndividualProjectView(discord.ui.View):
 
   @discord.ui.button(label="Change Title",style=discord.ButtonStyle.primary)
   async def change_title(self,interaction:discord.Interaction,button:discord.ui.Button):
-    # Sending modal for changing project title.
-    await interaction.response.send_modal(ChangeTitleModal(self.project))
+    if await get_admin_role(interaction.guild) in interaction.user.roles:
+      # Sending modal for changing project title.
+      await interaction.response.send_modal(ChangeTitleModal(self.project))
+    else:
+      # Sending private message.
+      await interaction.user.send("You do not have the necessary role to change the project title.")
+      await interaction.response.defer()
 
   @discord.ui.button(label="Change Deadline",style=discord.ButtonStyle.primary)
   async def change_deadline(self,interaction:discord.Interaction,button:discord.ui.Button):
-    # Sending modal for changing project deadline.
-    await interaction.response.send_modal(ChangeDeadlineModal(self.project))
+    if await get_admin_role(interaction.guild) in interaction.user.roles:
+      # Sending modal for changing project deadline.
+      await interaction.response.send_modal(ChangeDeadlineModal(self.project))
+    else:
+      # Sending private message.
+      await interaction.user.send("You do not have the necessary role to change the project deadline.")
+      await interaction.response.defer()
 
   @discord.ui.button(label="Change Status",style=discord.ButtonStyle.primary)
   async def change_status(self,interaction:discord.Interaction,button:discord.ui.Button):
-    # Sending message to change status.
-    view = discord.ui.View()
-    # Creating embed.
-    embed = discord.Embed(color=discord.Color.blurple(),description=f"Select a status for the task:")
-    # Creating select menu.
-    select_menu = self.create_status_menu()
-    view.add_item(select_menu)
-    # Sending message.
-    await interaction.response.send_message(embed=embed,view=view)
-    # Deleting message after interaction.
-    await self.client.wait_for("interaction")
-    await interaction.delete_original_response()
+    if await get_admin_role(interaction.guild) in interaction.user.roles:
+      # Sending message to change status.
+      view = discord.ui.View()
+      # Creating embed.
+      embed = discord.Embed(color=discord.Color.blurple(),description=f"Select a status for the task:")
+      # Creating select menu.
+      select_menu = self.create_status_menu(interaction.user)
+      view.add_item(select_menu)
+      # Sending message.
+      await interaction.response.send_message(embed=embed,view=view)
+      # Deleting message after interaction.
+      await self.client.wait_for("interaction")
+      await interaction.delete_original_response()
+    else:
+      # Sending private message.
+      await interaction.user.send("You do not have the necessary role to change the project status.")
+      await interaction.response.defer()
 
   @discord.ui.button(label="Change Priority",style=discord.ButtonStyle.primary)
   async def change_priority(self,interaction:discord.Interaction,button:discord.ui.Button):
-    # Sending message to set priority.
-    view = discord.ui.View()
-    # Creating embed.
-    embed = discord.Embed(color=discord.Color.blurple(),description=f"Select a priority for the task:")
-    # Creating select menu.
-    select_menu = self.create_priority_menu()
-    view.add_item(select_menu)
-    # Sending message.
-    await interaction.response.send_message(embed=embed,view=view)
-    # Deleting message after interaction.
-    await self.client.wait_for("interaction")
-    await interaction.delete_original_response()
+    if await get_admin_role(interaction.guild) in interaction.user.roles:
+      # Sending message to set priority.
+      view = discord.ui.View()
+      # Creating embed.
+      embed = discord.Embed(color=discord.Color.blurple(),description=f"Select a priority for the task:")
+      # Creating select menu.
+      select_menu = self.create_priority_menu(interaction.user)
+      view.add_item(select_menu)
+      # Sending message.
+      await interaction.response.send_message(embed=embed,view=view)
+      # Deleting message after interaction.
+      await self.client.wait_for("interaction")
+      await interaction.delete_original_response()
+    else:
+      # Sending private message.
+      await interaction.user.send("You do not have the necessary role to change the project priority.")
+      await interaction.response.defer()
 
   @discord.ui.button(label="Finish Edit",style=discord.ButtonStyle.success)
   async def finish_edit(self,interaction:discord.Interaction,button:discord.ui.Button):
-    self.close_check = True
+    if await get_admin_role(interaction.guild) in interaction.user.roles:
+      self.close_check = True
+    else:
+      # Sending private message.
+      await interaction.user.send("You do not have the necessary role to finish the project edit.")
+      await interaction.response.defer()
 
   @discord.ui.button(label="Assign Team",style=discord.ButtonStyle.primary,row=2)
   async def assign_team(self,interaction:discord.Interaction,button:discord.ui.Button):
-    # Sending select team message.
-    embed = discord.Embed(colour=discord.Color.blurple(),title="",description=f"Select a team to assign to {self.project.name}:")
-    # Creating view for message.
-    view = discord.ui.View()
-    select_menu = self.create_team_menu(True)
-    view.add_item(select_menu)
-    # Sending message.
-    await interaction.response.send_message(embed=embed,view=view)
-    # Deleting message after interaction.
-    await self.client.wait_for("interaction")
-    await interaction.delete_original_response()
+    if await get_admin_role(interaction.guild) in interaction.user.roles:
+      # Sending select team message.
+      embed = discord.Embed(colour=discord.Color.blurple(),title="",description=f"Select a team to assign to {self.project.name}:")
+      # Creating view for message.
+      view = discord.ui.View()
+      select_menu = self.create_team_menu(True,self.interaction.user)
+      view.add_item(select_menu)
+      # Sending message.
+      await interaction.response.send_message(embed=embed,view=view)
+      # Deleting message after interaction.
+      await self.client.wait_for("interaction")
+      await interaction.delete_original_response()
+    else:
+      # Sending private message.
+      await interaction.user.send("You do not have the necessary role to assign a team to the project.")
+      await interaction.response.defer()
 
   @discord.ui.button(label="Remove Team",style=discord.ButtonStyle.primary,row=2)
   async def remove_team(self,interaction:discord.Interaction,button:discord.ui.Button):
-    # Sending select team message.
-    embed = discord.Embed(colour=discord.Color.blurple(),title="",description=f"Select a team to remove from {self.project.name}:")
-    # Creating view for message.
-    view = discord.ui.View()
-    select_menu = self.create_team_menu(False)
-    view.add_item(select_menu)
-    # Sending message.
-    await interaction.response.send_message(embed=embed,view=view)
-    # Deleting message after interaction.
-    await self.client.wait_for("interaction")
-    await interaction.delete_original_response()
+    if await get_admin_role(interaction.guild) in interaction.user.roles:
+      # Sending select team message.
+      embed = discord.Embed(colour=discord.Color.blurple(),title="",description=f"Select a team to remove from {self.project.name}:")
+      # Creating view for message.
+      view = discord.ui.View()
+      select_menu = self.create_team_menu(False)
+      view.add_item(select_menu)
+      # Sending message.
+      await interaction.response.send_message(embed=embed,view=view)
+      # Deleting message after interaction.
+      await self.client.wait_for("interaction")
+      await interaction.delete_original_response()
+    else:
+      # Sending private message.
+      await interaction.user.send("You do not have the necessary role to remove a team from the project.")
+      await interaction.response.defer()
 
   @discord.ui.button(label="Add Task",style=discord.ButtonStyle.primary,row=2)
   async def add_task(self,interaction:discord.Interaction,button:discord.ui.Button):
-    # Sending add task modal.
-    await interaction.response.send_modal(AddTaskModal(project=self.project))
+    if await get_admin_role(interaction.guild) in interaction.user.roles:
+      # Sending add task modal.
+      await interaction.response.send_modal(AddTaskModal(project=self.project))
+    else:
+      # Sending private message.
+      await interaction.user.send("You do not have the necessary role to add a task to the project.")
+      await interaction.response.defer()
   
   @discord.ui.button(label="Edit Task",style=discord.ButtonStyle.primary,row=2)
   async def edit_task(self,interaction:discord.Interaction,button:discord.ui.Button):
-    # Sending edit task modal.
-    await interaction.response.send_modal(EditTaskModal(self.project,self.guild,self.client,self.workflow,self.command))
-  
+    if await get_admin_role(interaction.guild) in interaction.user.roles:
+      # Sending edit task modal.
+      await interaction.response.send_modal(EditTaskModal(self.project,self.guild,self.client,self.workflow,self.command))
+    else:
+      # Sending private message.
+      await interaction.user.send("You do not have the necessary role to edit a task in the project.")
+      await interaction.response.defer()
+
   @discord.ui.button(label="Delete Task",style=discord.ButtonStyle.primary,row=2)
   async def delete_task(self,interaction:discord.Interaction,button:discord.ui.Button):
-    # Sending delete task modal.
-    await interaction.response.send_modal(DelTaskModal(project=self.project))
+    if await get_admin_role(interaction.guild) in interaction.user.roles:
+      # Sending delete task modal.
+      await interaction.response.send_modal(DelTaskModal(project=self.project))
+    else:
+      # Sending private message.
+      await interaction.user.send("You do not have the necessary role to delete a task from the project.")
+      await interaction.response.defer()
 
   @discord.ui.button(label="Archive Completed",style=discord.ButtonStyle.primary,row=4)
   async def archive_completed(self,interaction:discord.Interaction,button:discord.ui.Button):
-    # Setting all completed tasks to archive.
-    for task in self.project.tasks:
-      if task.status == "COMPLETED":
-        task.archive = True
-    await interaction.response.defer()
+    if await get_admin_role(interaction.guild) in interaction.user.roles:
+      # Setting all completed tasks to archive.
+      for task in self.project.tasks:
+        if task.status == "COMPLETED":
+          task.archive = True
+      await interaction.response.defer()
+    else:
+      # Sending private message.
+      await interaction.user.send("You do not have the necessary role to archive completed tasks.")
+      await interaction.response.defer()
 
   @discord.ui.button(label="Show Archive",style=discord.ButtonStyle.primary,row=4)
   async def show_archive(self,interaction:discord.Interaction,button:discord.ui.Button):
-    self.archive_check = True
-    await interaction.response.defer()
+    if await get_admin_role(interaction.guild) in interaction.user.roles:
+      self.archive_check = True
+      await interaction.response.defer()
+    else:
+      # Sending private message.
+      await interaction.user.send("You do not have the necessary role to show the archived tasks.")
+      await interaction.response.defer()
 
   @discord.ui.button(label="Hide Archive",style=discord.ButtonStyle.primary,row=4)
   async def hide_archive(self,interaction:discord.Interaction,button:discord.ui.Button):
-    self.archive_check = False
-    await interaction.response.defer()
+    if await get_admin_role(interaction.guild) in interaction.user.roles:
+      self.archive_check = False
+      await interaction.response.defer()
+    else:
+      # Sending private message.
+      await interaction.user.send("You do not have the necessary role to hide the archived tasks.")
+      await interaction.response.defer()
 
-  def create_team_menu(self,menu_type:bool):
+
+  def create_team_menu(self,menu_type:bool,user):
     # Getting available teams.
     available_teams = get_team_selection(self.project,self.workflow,menu_type)
-    member_select = TeamSelectMenu(self.workflow,self.project,menu_type)
+    member_select = TeamSelectMenu(self.workflow,self.project,menu_type,user)
     member_select.placeholder = "Teams"
     member_select.max_values = len(available_teams)
     member_select.options = available_teams
     return member_select
   
-  def create_status_menu(self):
-    status_select = StatusSelectMenu(self.project)
+  def create_status_menu(self,user):
+    status_select = StatusSelectMenu(self.project,user)
     status_select.placeholder = "Status"
     status_select.max_values = 1
     status_select.options = get_status_selection()
     return status_select
 
-  def create_priority_menu(self):
-    priority_select = PrioritySelectMenu(self.project)
+  def create_priority_menu(self,user):
+    priority_select = PrioritySelectMenu(self.project,user)
     priority_select.placeholder = "Priority"
     priority_select.max_values = 1
     priority_select.options = get_priority_selection()
@@ -330,92 +408,162 @@ class TeamManagerIndividualProjectView(discord.ui.View):
 
   @discord.ui.button(label="Request Approval",style=discord.ButtonStyle.primary)
   async def request_completion(self,interaction:discord.Interaction,button:discord.ui.Button):
-    # Changing project status to APPROVAL PENDING.
-    self.project.status = "APPROVAL PENDING"
-    await interaction.response.defer()
+    if check_team_manager_project(interaction.user,self.project,self.guild,self.workflow):
+      # Changing project status to APPROVAL PENDING.
+      self.project.status = "APPROVAL PENDING"
+      await interaction.response.defer()
+    else:
+      # Sending private message.
+      await interaction.user.send("You do not have the necessary role to request project approval.")
+      await interaction.response.defer()
 
   @discord.ui.button(label="Archive Completed",style=discord.ButtonStyle.primary)
   async def archive_completed(self,interaction:discord.Interaction,button:discord.ui.Button):
-    # Setting all completed tasks to archive.
-    for task in self.project.tasks:
-      if task.status == "COMPLETED":
-        task.archive = True
-    await interaction.response.defer()
+    if check_team_manager_project(interaction.user,self.project,self.guild,self.workflow):
+      # Setting all completed tasks to archive.
+      for task in self.project.tasks:
+        if task.status == "COMPLETED":
+          task.archive = True
+      await interaction.response.defer()
+    else:
+      # Sending private message.
+      await interaction.user.send("You do not have the necessary role to archive completed tasks.")
+      await interaction.response.defer()
 
   @discord.ui.button(label="Show Archive",style=discord.ButtonStyle.primary)
   async def show_archive(self,interaction:discord.Interaction,button:discord.ui.Button):
-    self.archive_check = True
-    await interaction.response.defer()
+    if check_team_manager_project(interaction.user,self.project,self.guild,self.workflow):
+      self.archive_check = True
+      await interaction.response.defer()
+    else:
+      # Sending private message.
+      await interaction.user.send("You do not have the necessary role to show archived tasks.")
+      await interaction.response.defer()
 
   @discord.ui.button(label="Hide Archive",style=discord.ButtonStyle.primary)
   async def hide_archive(self,interaction:discord.Interaction,button:discord.ui.Button):
-    self.archive_check = False
-    await interaction.response.defer()
+    if check_team_manager_project(interaction.user,self.project,self.guild,self.workflow):
+      self.archive_check = False
+      await interaction.response.defer()
+    else:
+      # Sending private message.
+      await interaction.user.send("You do not have the necessary role to hide archived tasks.")
+      await interaction.response.defer()
 
   @discord.ui.button(label="Finish Edit",style=discord.ButtonStyle.success)
   async def finish_edit(self,interaction:discord.Interaction,button:discord.ui.Button):
-    self.close_check = True
+    if check_team_manager_project(interaction.user,self.project,self.guild,self.workflow):
+      self.close_check = True
+    else:
+      # Sending private message.
+      await interaction.user.send("You do not have the necessary role to finish the project edit.")
+      await interaction.response.defer()
 
   @discord.ui.button(label="Add Task",style=discord.ButtonStyle.primary,row=2)
   async def add_task(self,interaction:discord.Interaction,button:discord.ui.Button):
+    if check_team_manager_project(interaction.user,self.project,self.guild,self.workflow):
     # Sending add task modal.
-    await interaction.response.send_modal(AddTaskModal(project=self.project))
+      await interaction.response.send_modal(AddTaskModal(project=self.project))
+    else:
+      # Sending private message.
+      await interaction.user.send("You do not have the necessary role to add a task to the project.")
+      await interaction.response.defer()
   
   @discord.ui.button(label="Edit Task",style=discord.ButtonStyle.primary,row=2)
   async def edit_task(self,interaction:discord.Interaction,button:discord.ui.Button):
-    # Sending edit task modal.
-    await interaction.response.send_modal(EditTaskModal(self.project,self.guild,self.client,self.workflow,self.command))
-  
+    if check_team_manager_project(interaction.user,self.project,self.guild,self.workflow):
+      # Sending edit task modal.
+     await interaction.response.send_modal(EditTaskModal(self.project,self.guild,self.client,self.workflow,self.command))
+    else:
+      # Sending private message.
+      await interaction.user.send("You do not have the necessary role to edit a task in the project.")
+      await interaction.response.defer()
+
   @discord.ui.button(label="Delete Task",style=discord.ButtonStyle.primary,row=2)
   async def delete_task(self,interaction:discord.Interaction,button:discord.ui.Button):
-    # Sending delete task modal.
-    await interaction.response.send_modal(DelTaskModal(project=self.project))
+    if check_team_manager_project(interaction.user,self.project,self.guild,self.workflow):
+      # Sending delete task modal.
+      await interaction.response.send_modal(DelTaskModal(project=self.project))
+    else:
+      # Sending private message.
+      await interaction.user.send("You do not have the necessary role to delete a task from the project.")
+      await interaction.response.defer()
 
 
 class TeamSelectMenu(discord.ui.Select):
   
-  def __init__(self,workflow,project,menu_type):
+  def __init__(self,workflow,project,menu_type,user):
     super().__init__()
     self.workflow = workflow
     self.project = project
     self.menu_type = menu_type
+    self.user = user
 
   async def callback(self, interaction: discord.Interaction):
-    for team_title in self.values:
-      team = self.workflow.get_team_from_name(team_title)
-      if self.menu_type:
-        self.project.add_team(team)
-        logger.info(f"Assigned {team.name} to ({self.project.name})")
-      else:
-        self.project.remove_team(team)
-        logger.info(f"Removed {team.name} from ({self.project.name})")
-    await interaction.response.defer()
+    if self.user.id == interaction.user.id:
+      for team_title in self.values:
+        team = self.workflow.get_team_from_name(team_title)
+        if self.menu_type:
+          self.project.add_team(team)
+          logger.info(f"Assigned {team.name} to ({self.project.name})")
+        else:
+          self.project.remove_team(team)
+          logger.info(f"Removed {team.name} from ({self.project.name})")
+      await interaction.response.defer()
+    elif self.user.id != interaction.user.id and await get_admin_role(interaction.guild) in interaction.user.roles:
+      # Sending private message.
+      await interaction.user.send("Please use the `Add Teams` button to generate your own team selection.")
+      await interaction.response.defer()
+    else:
+      # Sending private message.
+      await interaction.user.send("You do not have the necessary permission to assign teams to a project.")
+      await interaction.response.defer()
 
 
 class StatusSelectMenu(discord.ui.Select):
 
-  def __init__(self,project):
+  def __init__(self,project,user):
     super().__init__()
     self.project = project
+    self.user = user
   
   async def callback(self, interaction: discord.Interaction):
-    # Setting status from selected value.
-    self.project.change_status(self.values[0])
-    logger.info(f"Changed status of ({self.project.name}) to {self.values[0]}.")
-    await interaction.response.defer()
-
+    if self.user.id == interaction.user.id:
+      # Setting status from selected value.
+      self.project.change_status(self.values[0])
+      logger.info(f"Changed status of ({self.project.name}) to {self.values[0]}.")
+      await interaction.response.defer()
+    elif self.user.id != interaction.user.id and await get_admin_role(interaction.guild) in interaction.user.roles:
+      # Sending private message.
+      await interaction.user.send("Please use the `Change Status` button to generate your own status selection.")
+      await interaction.response.defer()
+    else:
+      # Sending private message.
+      await interaction.user.send("You do not have the necessary permission to change the status of a project.")
+      await interaction.response.defer()
+    
 
 class PrioritySelectMenu(discord.ui.Select):
   
-  def __init__(self,project):
+  def __init__(self,project,user):
     super().__init__()
     self.project = project
+    self.user = user
 
   async def callback(self, interaction: discord.Interaction):
-    # Setting priority from selected value.
-    self.project.change_priority(self.values[0])
-    logger.info(f"Changed priority of ({self.project.name}) to {self.values}")
-    await interaction.response.defer()
+    if self.user.id == interaction.user.id:
+      # Setting priority from selected value.
+      self.project.change_priority(self.values[0])
+      logger.info(f"Changed priority of ({self.project.name}) to {self.values}")
+      await interaction.response.defer()
+    elif self.user.id != interaction.user.id and await get_admin_role(interaction.guild) in interaction.user.roles:
+      # Sending private message.
+      await interaction.user.send("Please use the `Change Priority` button to generate your own priority selection.")
+      await interaction.response.defer()
+    else:
+      # Sending private message.
+      await interaction.user.send("You do not have the necessary permission to change the priority of a project.")
+      await interaction.response.defer()
 
 
 # - - - - - - - - - - - - - - - - - -
@@ -563,7 +711,7 @@ async def send_edit_task_message(task,guild,client,workflow,command):
         log_list += f"`{log_date}` {task.logs[log_date][0]} {log_author.mention}\n"
       embed.add_field(name="Log:",value=log_list,inline=False)
 
-    view = ManagerIndividualTaskView(task,guild,client,workflow,command.author)
+    view = ManagerIndividualTaskView(task,guild,client,workflow,command.user)
 
     # Toggling buttons.
     available_members = get_member_selection(task,workflow,guild,True)
@@ -648,16 +796,15 @@ def get_archive_count(project):
 
 # - - - - - - - - - - - - - - - - - -
 
-async def manage_projects(command,client,workflow):
+async def manage_projects(interaction,client,workflow):
   # Workflow Manager functionality.
-  if await get_admin_role(command.guild) in command.author.roles:
+  if await get_admin_role(interaction.guild) in interaction.user.roles:
     logger.info("Command request approved.")
-    channel = command.channel
     # Creating embed and view.
     embed = discord.Embed(color=discord.Color.blurple(),description="Please select a project to manage:")
     view = discord.ui.View()
     # Creating project select menu.
-    project_select_menu = ProjectSelectMenu(workflow,command,client)
+    project_select_menu = ProjectSelectMenu(workflow,interaction,client)
     available_projects = workflow.projects
     available_project_options = create_project_options(available_projects)
     if len(available_projects) != 0:
@@ -666,21 +813,20 @@ async def manage_projects(command,client,workflow):
       project_select_menu.options = available_project_options
       view.add_item(project_select_menu)
       # Sending  message to channel.
-      await channel.send(embed=embed,view=view,delete_after=300)
+      await interaction.response.send_message(embed=embed,view=view,delete_after=300)
     else:
       embed = discord.Embed(color=discord.Color.blurple(),description="No projects to manage.")
-      await channel.send(embed=embed,delete_after=300)
+      await interaction.response.send_message(embed=embed,delete_after=300)
   # Team Manager functionality.
   else:
-    if check_team_manager(command.author,command.guild,workflow):
+    if check_team_manager(interaction.user,interaction.guild,workflow):
       logger.info("Command request approved.")
-      channel = command.channel
       # Creating embed and view.
       embed = discord.Embed(color=discord.Color.blurple(),description="Please select a project to manage:")
       view = discord.ui.View()
       # Creating project select menu.
-      project_select_menu = ProjectSelectMenu(workflow,command,client)
-      available_projects = get_projects_for_member(command.author,workflow)
+      project_select_menu = ProjectSelectMenu(workflow,interaction,client)
+      available_projects = get_projects_for_member(interaction.user,workflow)
       available_project_options = create_project_options(available_projects)
       if len(available_projects) != 0:
         project_select_menu.placeholder = "Projects"
@@ -688,10 +834,7 @@ async def manage_projects(command,client,workflow):
         project_select_menu.options = available_project_options
         view.add_item(project_select_menu)
         # Sending  message to channel.
-        await channel.send(embed=embed,view=view,delete_after=300)
+        await interaction.response.send_message(embed=embed,view=view,delete_after=300)
       else:
         embed = discord.Embed(color=discord.Color.blurple(),description="No projects to manage.")
-        await channel.send(embed=embed,delete_after=300)
-    else:
-      # Sending private message.
-      await command.author.send("You do not have the necessary role to manage projects.")
+        await interaction.response.send_message(embed=embed,delete_after=300)
