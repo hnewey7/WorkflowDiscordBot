@@ -13,6 +13,7 @@ import pathlib
 import logging.config
 import logging.handlers
 import json
+import asyncio
 
 import commands
 from workflow import Workflow
@@ -81,6 +82,11 @@ def init_events(client,tree):
         logger.info(f"Joined discord server ({guild.name}).")
         
         for role in await guild.fetch_roles():
+          if role.name == "WorkflowBot":
+            logger.info("Setting WorkflowBot role to top role position.")
+            await role.edit(position=100)
+
+        for role in await guild.fetch_roles():
             if role.name == "Workflow Manager":
                 admin_role = role
                 break
@@ -113,8 +119,7 @@ def init_events(client,tree):
           if role not in before.roles:
             new_role = role
 
-        # Check if manager role.
-        try:
+            # Check if manager role.
             if new_role.id in manager_ids:
                 logging.info(f"Manager role updated, {new_role.name}")
                 team = workflow.get_team_from_manager_id(new_role.id)
@@ -125,8 +130,7 @@ def init_events(client,tree):
                 await after.add_roles(team_role)
                 await team_role.edit(reason="Trigger guild role event.")
                 logging.info(f"Adding member to standard team role, {team_role.name}")
-        except:
-            pass
+
         
 
     @client.event
@@ -173,7 +177,7 @@ def init_events(client,tree):
         logger.info(f"Removed discord server ({guild.name}).")
 
         # Removing guild from workflow.
-        workflows.pop(guild.id)
+        workflows.pop(str(guild.id))
         logger.info("Removing guild from workflows dictionary.")
 
     '''
@@ -214,9 +218,15 @@ def init_commands(client,tree):
 
 
   @tree.command(name="help",description="Provides a list of commands that can be used with the Workflow Bot.")
+  @discord.app_commands.checks.cooldown(1,60)
   async def help_command(interaction):
     logger.info("Requesting help command.")
     await commands.help_command(interaction,workflows[str(interaction.guild.id)])
+
+  @help_command.error
+  async def on_help_error(interaction:discord.Interaction, error:discord.app_commands.AppCommandError):
+    if isinstance(error, discord.app_commands.CommandOnCooldown):
+      await interaction.response.send_message("Please wait before sending the `/help` command again.",ephemeral=True)
   
 
   @tree.command(name="set_active_channel",description="Sets the current channel to the active channel and displays all existing projects in the workflow.")
@@ -228,7 +238,7 @@ def init_commands(client,tree):
   @set_active_channel_command.error
   async def on_set_active_channel_error(interaction: discord.Interaction, error: discord.app_commands.AppCommandError):
      if isinstance(error, discord.app_commands.MissingRole):
-        await interaction.response.send_message("You do not have the necessary role to use this command.")
+        await interaction.response.send_message("You do not have the necessary role to use this command.",ephemeral=True)
 
 
   @tree.command(name="teams",description="Displays all existing teams on the server and allows adding, editing and deleting teams.")
@@ -291,9 +301,17 @@ async def init_saved(client):
 
 
 async def init_message_looping(client):
+    task_list = []
     for guild_id in workflows.keys():
+        logger.info(f"Restarting message looping, {guild_id}")
         if workflows[guild_id].active_message:
-            await commands.restart_looping(client,workflows[guild_id],await client.fetch_guild(guild_id))
+            logger.info(f"Active message retrieved.")
+            restart_looping_task = asyncio.create_task(commands.restart_looping(client,workflows[guild_id],await client.fetch_guild(guild_id)))
+            task_list.append(restart_looping_task)
+    
+    logger.info("- - - - - - - - - - - - - - - - - - - - - -")
+    await asyncio.wait(task_list)
+    
 
 # - - - - - - - - - - - - - - - - - - - - - - - 
 

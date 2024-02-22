@@ -33,7 +33,7 @@ async def help_command(interaction,workflow):
     embed.add_field(name="`/manage_tasks`", value=f"Allows members to select from what tasks have been assigned to them and make edits to that task. {manager_mentions} are able to edit more details about the task.",inline=False)
 
     # Sending message.
-    await interaction.response.send_message(embed=embed,delete_after=300)
+    await interaction.response.send_message(embed=embed,ephemeral=False,delete_after=300)
 
 # Disconnect command.
 async def disconnect_command(client):
@@ -85,7 +85,7 @@ def get_projects_for_member(member,workflow):
   projects = []
   for role in member.roles:
     for team in workflow.teams:
-      if role.id == team.role_id:
+      if role.id == team.manager_role_id:
         projects.extend(team.get_projects_from_ids(workflow))
   return projects
 

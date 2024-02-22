@@ -62,7 +62,7 @@ class TeamsButtonView(discord.ui.View):
         self.close_check = True
       else:
         # Sending private message.
-        await interaction.user.send("You do not have the necessary role to delete teams from the workflow.")
+        await interaction.user.send("You do not have the necessary role to finish the teams edit.")
         await interaction.response.defer()
 
 
@@ -132,6 +132,8 @@ class AddTeamModal(discord.ui.Modal,title="New Team"):
         # Creating new manager role in guild.
         manager_role =  await interaction.guild.create_role(name=self.title_input.value + " Manager",color=manager_colour)
         logger.info(f"New manager role created for team ({manager_role.name}).")
+        # Changing role positions.
+        new_role.position = manager_role.position - 1
         # Updating role id for new team.
         self.workflow.teams[self.workflow.teams.index(new_team)].role_id = new_role.id
         self.workflow.teams[self.workflow.teams.index(new_team)].manager_role_id = manager_role.id
@@ -162,7 +164,7 @@ class EditTeamModal(discord.ui.Modal,title="Edit Team"):
             member_list = f"**{role.mention}**\n"
             if len(role.members) != 0:
                 for index,member in enumerate(role.members):
-                    member_list += f'{index+1}. {member.name}' if member not in manager_role.members else  f'{index+1}. {member.name} - **Manager**'
+                    member_list += f'{index+1}. {member.name}\n' if member not in manager_role.members else  f'{index+1}. {member.name} - **Manager**\n'
             else:
                 member_list += "No members."
             # Creating embed for message.

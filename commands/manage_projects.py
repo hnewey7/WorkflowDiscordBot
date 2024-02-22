@@ -132,6 +132,9 @@ class ProjectSelectMenu(discord.ui.Select):
           view.show_archive.disabled = True
         else:
           view.hide_archive.disabled = True
+        if len(project.tasks) == 0:
+          view.edit_task.disabled = True
+          view.delete_task.disabled = True
       else:
         view = TeamManagerIndividualProjectView(project,self.workflow,self.client,self.guild,self.command)
         # Toggling buttons.
@@ -143,6 +146,9 @@ class ProjectSelectMenu(discord.ui.Select):
           view.show_archive.disabled = True
         else:
           view.hide_archive.disabled = True
+        if len(project.tasks) == 0:
+          view.edit_task.disabled = True
+          view.delete_task.disabled = True
 
       if archive_check:
         task_list = ""
@@ -275,7 +281,7 @@ class WorkflowManagerIndividualProjectView(discord.ui.View):
       embed = discord.Embed(colour=discord.Color.blurple(),title="",description=f"Select a team to assign to {self.project.name}:")
       # Creating view for message.
       view = discord.ui.View()
-      select_menu = self.create_team_menu(True,self.interaction.user)
+      select_menu = self.create_team_menu(True,interaction.user)
       view.add_item(select_menu)
       # Sending message.
       await interaction.response.send_message(embed=embed,view=view)
@@ -294,7 +300,7 @@ class WorkflowManagerIndividualProjectView(discord.ui.View):
       embed = discord.Embed(colour=discord.Color.blurple(),title="",description=f"Select a team to remove from {self.project.name}:")
       # Creating view for message.
       view = discord.ui.View()
-      select_menu = self.create_team_menu(False)
+      select_menu = self.create_team_menu(False,interaction.user)
       view.add_item(select_menu)
       # Sending message.
       await interaction.response.send_message(embed=embed,view=view)
@@ -729,6 +735,8 @@ async def send_edit_task_message(task,guild,client,workflow,command):
     else:
       await message.edit(embed=embed,view=view,delete_after=300)
       await client.wait_for("interaction")
+
+    await asyncio.sleep(0.5)
 
     # Checking to close message.
     if view.close_check:

@@ -146,8 +146,8 @@ async def convert_from_json(workflow_json, client):
 
     # Adding workflow to workflows.
     workflows[guild_id] = workflow
+    logger.info("- - - - - - - - - - - - - - - - - - - - - -")
 
-  logger.info("- - - - - - - - - - - - - - - - - - - - - -")
   logger.info("Data loading finished.")
   logger.info("- - - - - - - - - - - - - - - - - - - - - -")
 

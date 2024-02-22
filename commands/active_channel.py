@@ -80,7 +80,7 @@ class ProjectButtonView(discord.ui.View):
             await interaction.response.send_modal(EditTitleModal(project=self.project))
         else:
             # Sending private message.
-            await interaction.user.send("You do not have the necessary role to the change title of a project.")
+            await interaction.user.send("You do not initiate this project edit therefore cannot change the title.")
 
 
     @discord.ui.button(label="Change Deadline", style=discord.ButtonStyle.primary)
@@ -91,7 +91,7 @@ class ProjectButtonView(discord.ui.View):
             await interaction.response.send_modal(EditDeadlineModal(project=self.project))
         else:
             # Sending private message.
-            await interaction.user.send("You do not have the necessary role to the change deadline of a project.")
+            await interaction.user.send("You do not initiate this project edit therefore cannot change the deadline.")
 
     
     @discord.ui.button(label="Finish Edit",style=discord.ButtonStyle.success)
@@ -102,7 +102,7 @@ class ProjectButtonView(discord.ui.View):
             self.close_check = True
         else:
             # Sending private message.
-            await interaction.user.send("You do not have the necessary role to finish the edit on the project.")
+            await interaction.user.send("You do not initiate this project edit therefore cannot finish the project edit.")
 
 
     @discord.ui.button(label="Add Task", style=discord.ButtonStyle.primary,row=2)
@@ -113,7 +113,7 @@ class ProjectButtonView(discord.ui.View):
             await interaction.response.send_modal(AddTaskModal(project=self.project))
         else:
             # Sending private message.
-            await interaction.user.send("You do not have the necessary role to add tasks to the project.")
+            await interaction.user.send("You do not initiate this project edit therefore cannot add a task.")
 
 
     @discord.ui.button(label="Delete Task", style=discord.ButtonStyle.primary,row=2)
@@ -124,7 +124,7 @@ class ProjectButtonView(discord.ui.View):
             await interaction.response.send_modal(DelTaskModal(project=self.project))
         else:
             # Sending private message.
-            await interaction.user.send("You do not have the necessary role to delete tasks from the project.")
+            await interaction.user.send("You do not initiate this project edit therefore cannot delete a task.")
 
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -186,7 +186,7 @@ class EditProjectModal(discord.ui.Modal,title="Edit Project"):
                     for member_id in task.member_ids:
                         member = await self.workflow.active_message.guild.fetch_member(member_id)
                         task_members_mention += member.mention 
-                    task_list += f'{index}. {task.name} Due <t:{task.get_unix_deadline()}:R> {task_members_mention}\n' if task.deadline and task.status != "COMPLETED" else \
+                    task_list += f'{index}. {task.name} - *Due <t:{task.get_unix_deadline()}:R>* {task_members_mention}\n' if task.deadline and task.status != "COMPLETED" else \
                     f'{index}. {task.name} {task_status} {task_members_mention}\n'
             else:
                 task_list += "No tasks."
@@ -360,7 +360,7 @@ async def set_active_channel_command(interaction, workflow, client):
                         for member_id in task.member_ids:
                             member = await workflow.active_message.guild.fetch_member(member_id)
                             task_members_mention += member.mention 
-                        task_list += f'- {task.name} Due <t:{task.get_unix_deadline()}:R> {task_members_mention}\n' if task.deadline and task.status != "COMPLETED" else \
+                        task_list += f'- {task.name} - *Due <t:{task.get_unix_deadline()}:R>* {task_members_mention}\n' if task.deadline and task.status != "COMPLETED" else \
                     f'- {task.name} {task_status} {task_members_mention}\n'
                 else:
                     task_list += "No tasks."
@@ -378,8 +378,7 @@ async def set_active_channel_command(interaction, workflow, client):
         if initial_check:
             await interaction.response.send_message(embed=embed,view=view)
             response = await interaction.original_response()
-            response_message = await response.fetch()
-            workflow.active_message = response_message
+            workflow.active_message = response
             initial_check = False
             await client.wait_for('interaction')
         else:
@@ -416,7 +415,7 @@ async def restart_looping(client,workflow,guild):
                           for member_id in task.member_ids:
                             member = await workflow.active_message.guild.fetch_member(member_id)
                             task_members_mention += member.mention 
-                        task_list += f'- {task.name} Due <t:{task.get_unix_deadline()}:R> {task_members_mention}\n' if task.deadline and task.status != "COMPLETED" else \
+                        task_list += f'- {task.name} - *Due <t:{task.get_unix_deadline()}:R>* {task_members_mention}\n' if task.deadline and task.status != "COMPLETED" else \
                     f'- {task.name} {task_status} {task_members_mention}\n'
                 else:
                     task_list += "No tasks."

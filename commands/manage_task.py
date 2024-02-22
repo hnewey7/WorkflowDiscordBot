@@ -166,7 +166,7 @@ class ManagerIndividualTaskView(discord.ui.View):
 
   @discord.ui.button(label="Change Description",style=discord.ButtonStyle.primary)
   async def change_description(self,interaction:discord.Interaction,button:discord.ui.Button):
-    if check_team_manager_project(interaction.user,self.workflow.get_project_by_id(self.task.project),self.guild,self.workflow):
+    if check_team_manager_project(interaction.user,self.workflow.get_project_by_id(self.task.project),self.guild,self.workflow) or await get_admin_role(interaction.guild) in interaction.user.roles:
       # Sending description modal.
       await interaction.response.send_modal(DescriptionModal(self.task))
     else:
@@ -177,7 +177,7 @@ class ManagerIndividualTaskView(discord.ui.View):
 
   @discord.ui.button(label="Change Status",style=discord.ButtonStyle.primary)
   async def change_status(self,interaction:discord.Interaction,button:discord.ui.Button):
-    if check_team_manager_project(interaction.user,self.workflow.get_project_by_id(self.task.project),self.guild,self.workflow):
+    if check_team_manager_project(interaction.user,self.workflow.get_project_by_id(self.task.project),self.guild,self.workflow) or await get_admin_role(interaction.guild) in interaction.user.roles:
       # Sending message to change status.
       view = discord.ui.View()
       # Creating embed.
@@ -197,7 +197,7 @@ class ManagerIndividualTaskView(discord.ui.View):
 
   @discord.ui.button(label="Change Priority",style=discord.ButtonStyle.primary)
   async def change_priority(self,interaction:discord.Interaction,button:discord.ui.Button):
-    if check_team_manager_project(interaction.user,self.workflow.get_project_by_id(self.task.project),self.guild,self.workflow):
+    if check_team_manager_project(interaction.user,self.workflow.get_project_by_id(self.task.project),self.guild,self.workflow) or await get_admin_role(interaction.guild) in interaction.user.roles:
       # Sending message to set priority.
       view = discord.ui.View()
       # Creating embed.
@@ -217,8 +217,9 @@ class ManagerIndividualTaskView(discord.ui.View):
 
   @discord.ui.button(label="Finish Edit",style=discord.ButtonStyle.success)
   async def finish_edit(self,interaction:discord.Interaction,button:discord.Button):
-    if check_team_manager_project(interaction.user,self.workflow.get_project_by_id(self.task.project),self.guild,self.workflow):
+    if check_team_manager_project(interaction.user,self.workflow.get_project_by_id(self.task.project),self.guild,self.workflow) or await get_admin_role(interaction.guild) in interaction.user.roles:
       self.close_check = True
+      await interaction.response.defer()
     else:
       # Sending private message.
       await interaction.user.send("You are not a manager of this project therefore cannot finish the task edit.")
@@ -226,7 +227,7 @@ class ManagerIndividualTaskView(discord.ui.View):
 
   @discord.ui.button(label="Assign Member",style=discord.ButtonStyle.primary,row=2)
   async def assign_member(self,interaction:discord.Interaction,button:discord.ui.Button):
-    if check_team_manager_project(interaction.user,self.workflow.get_project_by_id(self.task.project),self.guild,self.workflow):
+    if check_team_manager_project(interaction.user,self.workflow.get_project_by_id(self.task.project),self.guild,self.workflow) or await get_admin_role(interaction.guild) in interaction.user.roles:
       view = discord.ui.View()
       # Creating embed.
       embed = discord.Embed(color=discord.Color.blurple(),description=f"Select a member to assign to the task:")
@@ -245,7 +246,7 @@ class ManagerIndividualTaskView(discord.ui.View):
 
   @discord.ui.button(label="Remove Member",style=discord.ButtonStyle.primary,row=2)
   async def remove_member(self,interaction:discord.Interaction,button:discord.Button):
-    if check_team_manager_project(interaction.user,self.workflow.get_project_by_id(self.task.project),self.guild,self.workflow):
+    if check_team_manager_project(interaction.user,self.workflow.get_project_by_id(self.task.project),self.guild,self.workflow) or await get_admin_role(interaction.guild) in interaction.user.roles:
       view = discord.ui.View()
       # Creating embed.
       embed = discord.Embed(color=discord.Color.blurple(),description=f"Select a member to remove from the task:")
@@ -264,7 +265,7 @@ class ManagerIndividualTaskView(discord.ui.View):
 
   @discord.ui.button(label="Add Log", style=discord.ButtonStyle.primary,row=2)
   async def add_log(self,interaction:discord.Interaction,button:discord.Button):
-    if check_team_manager_project(interaction.user,self.workflow.get_project_by_id(self.task.project),self.guild,self.workflow):
+    if check_team_manager_project(interaction.user,self.workflow.get_project_by_id(self.task.project),self.guild,self.workflow) or await get_admin_role(interaction.guild) in interaction.user.roles:
       # Sending log modal.
       await interaction.response.send_modal(AddLogModal(self.task))
     else:
@@ -274,7 +275,7 @@ class ManagerIndividualTaskView(discord.ui.View):
 
   @discord.ui.button(label="Remove Log", style=discord.ButtonStyle.primary,row=2)
   async def remove_log(self,interaction:discord.Interaction,button:discord.Button):
-    if check_team_manager_project(interaction.user,self.workflow.get_project_by_id(self.task.project),self.guild,self.workflow):
+    if check_team_manager_project(interaction.user,self.workflow.get_project_by_id(self.task.project),self.guild,self.workflow) or await get_admin_role(interaction.guild) in interaction.user.roles:
       view = discord.ui.View()
       # Creating embed.
       embed = discord.Embed(color=discord.Color.blurple(),description=f"Select a log to remove from the task:")
