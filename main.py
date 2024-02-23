@@ -106,7 +106,6 @@ def init_events(client,tree):
     # On role update event.
     @client.event
     async def on_member_update(before, after):
-        logger.info("- - - - - - - - - - - - - - - - - - - - - -")
         logging.info("Member's role updated event.")
         # Getting workflow.
         guild = after.guild
@@ -130,12 +129,12 @@ def init_events(client,tree):
                 await after.add_roles(team_role)
                 await team_role.edit(reason="Trigger guild role event.")
                 logging.info(f"Adding member to standard team role, {team_role.name}")
+        logger.info("- - - - - - - - - - - - - - - - - - - - - -")
 
         
 
     @client.event
     async def on_guild_role_delete(role):
-      logger.info("- - - - - - - - - - - - - - - - - - - - - -")
       logging.info("Role deleted event.")
       # Getting workflow.
       guild = role.guild
@@ -167,18 +166,20 @@ def init_events(client,tree):
         role = guild.get_role(team.manager_role_id)
         await role.edit(reason="Trigger guild role event.")
         await role.delete()
+        logger.info("- - - - - - - - - - - - - - - - - - - - - -")
       else:
+        logger.info("- - - - - - - - - - - - - - - - - - - - - -")
         pass
 
     # On guild remove event.
     @client.event
     async def on_guild_remove(guild):
-        logger.info("- - - - - - - - - - - - - - - - - - - - - -")
         logger.info(f"Removed discord server ({guild.name}).")
 
         # Removing guild from workflow.
         workflows.pop(str(guild.id))
         logger.info("Removing guild from workflows dictionary.")
+        logger.info("- - - - - - - - - - - - - - - - - - - - - -")
 
     '''
     # On message event.
@@ -202,6 +203,7 @@ def init_events(client,tree):
       logger.info("Starting command tree syncing.")
       await tree.sync()
       logger.info("Finished command tree syncing.")
+      logger.info("- - - - - - - - - - - - - - - - - - - - - -")
 
 
 def init_commands(client,tree):
@@ -218,7 +220,7 @@ def init_commands(client,tree):
 
 
   @tree.command(name="help",description="Provides a list of commands that can be used with the Workflow Bot.")
-  @discord.app_commands.checks.cooldown(1,60)
+  @discord.app_commands.checks.cooldown(1,300)
   async def help_command(interaction):
     logger.info("Requesting help command.")
     await commands.help_command(interaction,workflows[str(interaction.guild.id)])
@@ -250,7 +252,7 @@ def init_commands(client,tree):
   @teams_command.error
   async def on_teams_error(interaction: discord.Interaction, error: discord.app_commands.AppCommandError):
     if isinstance(error, discord.app_commands.CheckFailure):
-        await interaction.response.send_message("You do not have the necessary role to use this command.")
+        await interaction.response.send_message("You do not have the necessary role to use this command.",ephemeral=True)
 
 
   @tree.command(name="manage_projects",description="Allows projects to be selected and managed by managers.")

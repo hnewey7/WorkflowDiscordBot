@@ -33,7 +33,7 @@ class WorkflowButtonView(discord.ui.View):
             await interaction.response.send_modal(AddProjectModal(workflow=self.workflow))
         else:
             # Sending private message.
-            await interaction.user.send("You do not have the necessary role to add projects to the workflow.")
+            await interaction.response.send_message("You do not have the necessary role to add projects to the workflow.",ephemeral=True)
 
 
     @discord.ui.button(label="Edit Project", style=discord.ButtonStyle.primary)
@@ -46,7 +46,7 @@ class WorkflowButtonView(discord.ui.View):
             await interaction.response.send_modal(EditProjectModal(workflow=self.workflow,client=self.client,user=interaction.user))
         else:
             # Sending private message.
-            await interaction.user.send("You do not have the necessary role to edit projects in the workflow.")
+            await interaction.response.send_message("You do not have the necessary role to edit projects in the workflow.",ephemeral=True)
 
 
     @discord.ui.button(label="Delete Project", style=discord.ButtonStyle.primary)
@@ -59,7 +59,7 @@ class WorkflowButtonView(discord.ui.View):
             await interaction.response.send_modal(DelProjectModal(workflow=self.workflow))
         else:
             # Sending private message.
-            await interaction.user.send("You do not have the necessary role to delete projects in the workflow.")
+            await interaction.response.send_message("You do not have the necessary role to delete projects in the workflow.",ephemeral=True)
 
 
 
@@ -74,57 +74,32 @@ class ProjectButtonView(discord.ui.View):
 
     @discord.ui.button(label="Change Title", style=discord.ButtonStyle.primary)
     async def change_title(self, interaction: discord.Interaction, button: discord.ui.Button):
-        # Checking if user is previous user.
-        if self.user.id == interaction.user.id:
-            # Sending edit title modal.
-            await interaction.response.send_modal(EditTitleModal(project=self.project))
-        else:
-            # Sending private message.
-            await interaction.user.send("You do not initiate this project edit therefore cannot change the title.")
+      # Sending edit title modal.
+      await interaction.response.send_modal(EditTitleModal(project=self.project))
 
 
     @discord.ui.button(label="Change Deadline", style=discord.ButtonStyle.primary)
     async def change_deadline(self, interaction: discord.Interaction, button: discord.ui.Button):
-        # Checking if user is previous user.
-        if self.user.id == interaction.user.id:
-            # Sending edit deadline modal.
-            await interaction.response.send_modal(EditDeadlineModal(project=self.project))
-        else:
-            # Sending private message.
-            await interaction.user.send("You do not initiate this project edit therefore cannot change the deadline.")
+      # Sending edit deadline modal.
+      await interaction.response.send_modal(EditDeadlineModal(project=self.project))
 
     
     @discord.ui.button(label="Finish Edit",style=discord.ButtonStyle.success)
     async def finish_edit(self, interaction: discord.Interaction, button: discord.ui.Button):
-        # Checking if user is previous user.
-        if self.user.id == interaction.user.id:
-            # Indicating to close message.
-            self.close_check = True
-        else:
-            # Sending private message.
-            await interaction.user.send("You do not initiate this project edit therefore cannot finish the project edit.")
+      # Indicating to close message.
+      self.close_check = True
 
 
     @discord.ui.button(label="Add Task", style=discord.ButtonStyle.primary,row=2)
     async def add_task(self, interaction: discord.Interaction, button: discord.ui.Button):
-        # Checking if user is previous user.
-        if self.user.id == interaction.user.id:
-            # Sending add task modal.
-            await interaction.response.send_modal(AddTaskModal(project=self.project))
-        else:
-            # Sending private message.
-            await interaction.user.send("You do not initiate this project edit therefore cannot add a task.")
+      # Sending add task modal.
+      await interaction.response.send_modal(AddTaskModal(project=self.project))
 
 
     @discord.ui.button(label="Delete Task", style=discord.ButtonStyle.primary,row=2)
     async def del_task(self, interaction: discord.Interaction, button: discord.ui.Button):
-        # Checking if user is previous user.
-        if self.user.id == interaction.user.id:
-            # Sending delete task modal.
-            await interaction.response.send_modal(DelTaskModal(project=self.project))
-        else:
-            # Sending private message.
-            await interaction.user.send("You do not initiate this project edit therefore cannot delete a task.")
+      # Sending delete task modal.
+      await interaction.response.send_modal(DelTaskModal(project=self.project))
 
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -186,7 +161,7 @@ class EditProjectModal(discord.ui.Modal,title="Edit Project"):
                     for member_id in task.member_ids:
                         member = await self.workflow.active_message.guild.fetch_member(member_id)
                         task_members_mention += member.mention 
-                    task_list += f'{index}. {task.name} - *Due <t:{task.get_unix_deadline()}:R>* {task_members_mention}\n' if task.deadline and task.status != "COMPLETED" else \
+                    task_list += f'{index}. {task.name} - *Due <t:{task.get_unix_deadline()}:R>* {task_status} {task_members_mention}\n' if task.deadline and task.status != "COMPLETED" else \
                     f'{index}. {task.name} {task_status} {task_members_mention}\n'
             else:
                 task_list += "No tasks."
@@ -198,7 +173,7 @@ class EditProjectModal(discord.ui.Modal,title="Edit Project"):
                 view.del_task.disabled = True
             # Checking if initial message.
             if initial_check:
-                await interaction.response.send_message(embed=embed,view=view,delete_after=600)
+                await interaction.response.send_message(embed=embed,view=view,delete_after=300,ephemeral=True)
                 initial_check = False
                 await self.client.wait_for('interaction')
             else:
@@ -335,12 +310,16 @@ async def set_active_channel_command(interaction, workflow, client):
 
     # Sending projects embed.
     while True:
+        
         # Creating embed for message.
+        logger.info("Creating embed for active channel.")
         embed = discord.Embed(color=discord.Color.blurple(),title="Existing Projects")
 
         # Creating content of message.
         if len(workflow.projects) != 0:
+            logger.info("Adding projects to message.")
             for project in workflow.projects:
+                logger.info(f"Adding project, {project.name}")
                 # Creating field title.
                 field_title = f'{workflow.projects.index(project)+1}. {project.name} - Deadline <t:{project.get_unix_deadline()}:R>' if project.deadline else \
                 f'{workflow.projects.index(project)+1}. {project.name}'
@@ -351,14 +330,19 @@ async def set_active_channel_command(interaction, workflow, client):
                 if len(project.get_teams_from_ids(workflow)) != 0:
                   task_list += "\n"
                 if len(project.tasks) != 0:
+                    logger.info(f"Adding tasks to project, {project.name}")
                     for task in project.tasks:
+                      logger.info(f"Evaluating task, {task.name}")
                       if not task.archive:
                         task_members_mention = ""
                         task_status = ""
                         if task.status:
+                          logger.info(f"Adding task status, {task.status}")
                           task_status += f"**`{task.status}`**"
                         for member_id in task.member_ids:
+                            logger.info(f"Getting member from id, {member_id}")
                             member = await workflow.active_message.guild.fetch_member(member_id)
+                            logger.info(f"Successfully got member, {member.name}")
                             task_members_mention += member.mention 
                         task_list += f'- {task.name} - *Due <t:{task.get_unix_deadline()}:R>* {task_members_mention}\n' if task.deadline and task.status != "COMPLETED" else \
                     f'- {task.name} {task_status} {task_members_mention}\n'
@@ -369,6 +353,7 @@ async def set_active_channel_command(interaction, workflow, client):
             embed.description = 'No existing projects.'
 
         # Creating UI at bottom of message.
+        logger.info("Creating view for active message.")
         view = WorkflowButtonView(workflow=workflow,client=client)
         if len(workflow.projects) == 0:
             view.edit_project.disabled = True
