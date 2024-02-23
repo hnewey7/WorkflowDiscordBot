@@ -317,9 +317,7 @@ async def set_active_channel_command(interaction, workflow, client):
 
         # Creating content of message.
         if len(workflow.projects) != 0:
-            logger.info("Adding projects to message.")
             for project in workflow.projects:
-                logger.info(f"Adding project, {project.name}")
                 # Creating field title.
                 field_title = f'{workflow.projects.index(project)+1}. {project.name} - Deadline <t:{project.get_unix_deadline()}:R>' if project.deadline else \
                 f'{workflow.projects.index(project)+1}. {project.name}'
@@ -330,19 +328,14 @@ async def set_active_channel_command(interaction, workflow, client):
                 if len(project.get_teams_from_ids(workflow)) != 0:
                   task_list += "\n"
                 if len(project.tasks) != 0:
-                    logger.info(f"Adding tasks to project, {project.name}")
                     for task in project.tasks:
-                      logger.info(f"Evaluating task, {task.name}")
                       if not task.archive:
                         task_members_mention = ""
                         task_status = ""
                         if task.status:
-                          logger.info(f"Adding task status, {task.status}")
                           task_status += f"**`{task.status}`**"
                         for member_id in task.member_ids:
-                            logger.info(f"Getting member from id, {member_id}")
                             member = await workflow.active_message.guild.fetch_member(member_id)
-                            logger.info(f"Successfully got member, {member.name}")
                             task_members_mention += member.mention 
                         task_list += f'- {task.name} - *Due <t:{task.get_unix_deadline()}:R>* {task_members_mention}\n' if task.deadline and task.status != "COMPLETED" else \
                     f'- {task.name} {task_status} {task_members_mention}\n'

@@ -80,11 +80,6 @@ def init_events(client,tree):
     async def on_guild_join(guild):
         logger.info("- - - - - - - - - - - - - - - - - - - - - -")
         logger.info(f"Joined discord server ({guild.name}).")
-        
-        for role in await guild.fetch_roles():
-          if role.name == "WorkflowBot":
-            logger.info("Setting WorkflowBot role to top role position.")
-            await role.edit(position=100)
 
         for role in await guild.fetch_roles():
             if role.name == "Workflow Manager":
@@ -312,7 +307,8 @@ async def init_message_looping(client):
             task_list.append(restart_looping_task)
     
     logger.info("- - - - - - - - - - - - - - - - - - - - - -")
-    await asyncio.wait(task_list)
+    if len(task_list) != 0:
+      await asyncio.wait(task_list)
     
 
 # - - - - - - - - - - - - - - - - - - - - - - - 
