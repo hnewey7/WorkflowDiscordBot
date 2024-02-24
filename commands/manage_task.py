@@ -32,33 +32,18 @@ class TaskSelectMenu(discord.ui.Select):
     self.manager_check = manager_check
 
   async def callback(self, interaction: discord.Interaction):
-    if self.command.user.id == interaction.user.id:
-      async_tasks = []
-      async_tasks.append(asyncio.create_task(self.proceed_task(interaction)))
-      # Getting tasks from selected task.
-      available_tasks = get_available_tasks(self.command,self.workflow,self.manager_check)
-      selected_tasks = []
-      for selected_task in self.values:
-        for available_task in available_tasks:
-          if selected_task == available_task.name:
-            selected_tasks.append(available_task)
-      # Creating send all task.
-      async_tasks.append(asyncio.create_task(self.send_all_tasks(selected_tasks)))
-      await asyncio.wait(async_tasks,return_when=asyncio.ALL_COMPLETED)
-      await interaction.delete_original_response()
-    else:
-      # Sending private message.
-      await interaction.user.send("Please use `/manage_tasks` to generate your own task selection.")
-      await interaction.response.defer()
+    # Getting tasks from selected task.
+    available_tasks = get_available_tasks(self.command,self.workflow,self.manager_check)
+    selected_tasks = []
+    for selected_task in self.values:
+      for available_task in available_tasks:
+        if selected_task == available_task.name:
+          selected_tasks.append(available_task)
+    # Creating send all task.
+    await self.send_task_message(selected_tasks[0],interaction)
+    await self.command.delete_original_response()
 
-  async def proceed_task(self,interaction:discord.Interaction):
-    await interaction.response.defer()
-
-  async def send_all_tasks(self,selected_tasks):
-    for task in selected_tasks:
-      await self.send_task_message(task)
-
-  async def send_task_message(self,task):
+  async def send_task_message(self,task,interaction):
     initial_check = True
     while True:
       # Getting task members.
@@ -110,16 +95,16 @@ class TaskSelectMenu(discord.ui.Select):
         view = MemberIndividualTaskView(task,self.guild,self.client,self.workflow,self.command.user)
 
       if initial_check:
-        message = await self.command.channel.send(embed=embed,view=view,delete_after=300)
+        await interaction.response.send_message(embed=embed,view=view,delete_after=300,ephemeral=True)
         initial_check = False
         await self.client.wait_for("interaction")
       else:
-        await message.edit(embed=embed,view=view,delete_after=300)
+        await interaction.edit_original_response(embed=embed,view=view)
         await self.client.wait_for("interaction")
 
       # Checking to close message.
       if view.close_check:
-        await message.delete()
+        await interaction.delete_original_response()
         break
 
 
@@ -166,131 +151,90 @@ class ManagerIndividualTaskView(discord.ui.View):
 
   @discord.ui.button(label="Change Description",style=discord.ButtonStyle.primary)
   async def change_description(self,interaction:discord.Interaction,button:discord.ui.Button):
-    if check_team_manager_project(interaction.user,self.workflow.get_project_by_id(self.task.project),self.guild,self.workflow) or await get_admin_role(interaction.guild) in interaction.user.roles:
-      # Sending description modal.
-      await interaction.response.send_modal(DescriptionModal(self.task))
-    else:
-      # Sending private message.
-      await interaction.user.send("You are not a manager of this project therefore cannot change the task description.")
-      await interaction.response.defer()
-
+    # Sending description modal.
+    await interaction.response.send_modal(DescriptionModal(self.task))
 
   @discord.ui.button(label="Change Status",style=discord.ButtonStyle.primary)
   async def change_status(self,interaction:discord.Interaction,button:discord.ui.Button):
-    if check_team_manager_project(interaction.user,self.workflow.get_project_by_id(self.task.project),self.guild,self.workflow) or await get_admin_role(interaction.guild) in interaction.user.roles:
-      # Sending message to change status.
-      view = discord.ui.View()
-      # Creating embed.
-      embed = discord.Embed(color=discord.Color.blurple(),description=f"Select a status for the task:")
-      # Creating select menu.
-      select_menu = self.create_status_menu(interaction.user)
-      view.add_item(select_menu)
-      # Sending message.
-      await interaction.response.send_message(embed=embed,view=view)
-      # Deleting message after interaction.
-      await self.client.wait_for("interaction")
-      await interaction.delete_original_response()
-    else:
-      # Sending private message.
-      await interaction.user.send("You are not a manager of this project therefore cannot change the task status.")
-      await interaction.response.defer()
+    # Sending message to change status.
+    view = discord.ui.View()
+    # Creating embed.
+    embed = discord.Embed(color=discord.Color.blurple(),description=f"Select a status for the task:")
+    # Creating select menu.
+    select_menu = self.create_status_menu(interaction.user)
+    view.add_item(select_menu)
+    # Sending message.
+    await interaction.response.send_message(embed=embed,view=view,ephemeral=True)
+    # Deleting message after interaction.
+    await self.client.wait_for("interaction")
+    await interaction.delete_original_response()
 
   @discord.ui.button(label="Change Priority",style=discord.ButtonStyle.primary)
   async def change_priority(self,interaction:discord.Interaction,button:discord.ui.Button):
-    if check_team_manager_project(interaction.user,self.workflow.get_project_by_id(self.task.project),self.guild,self.workflow) or await get_admin_role(interaction.guild) in interaction.user.roles:
-      # Sending message to set priority.
-      view = discord.ui.View()
-      # Creating embed.
-      embed = discord.Embed(color=discord.Color.blurple(),description=f"Select a priority for the task:")
-      # Creating select menu.
-      select_menu = self.create_priority_menu(interaction.user)
-      view.add_item(select_menu)
-      # Sending message.
-      await interaction.response.send_message(embed=embed,view=view)
-      # Deleting message after interaction.
-      await self.client.wait_for("interaction")
-      await interaction.delete_original_response()
-    else:
-      # Sending private message.
-      await interaction.user.send("You are not a manager of this project therefore cannot change the task priority.")
-      await interaction.response.defer()
+    # Sending message to set priority.
+    view = discord.ui.View()
+    # Creating embed.
+    embed = discord.Embed(color=discord.Color.blurple(),description=f"Select a priority for the task:")
+    # Creating select menu.
+    select_menu = self.create_priority_menu(interaction.user)
+    view.add_item(select_menu)
+    # Sending message.
+    await interaction.response.send_message(embed=embed,view=view,ephemeral=True)
+    # Deleting message after interaction.
+    await self.client.wait_for("interaction")
+    await interaction.delete_original_response()
 
   @discord.ui.button(label="Finish Edit",style=discord.ButtonStyle.success)
   async def finish_edit(self,interaction:discord.Interaction,button:discord.Button):
-    if check_team_manager_project(interaction.user,self.workflow.get_project_by_id(self.task.project),self.guild,self.workflow) or await get_admin_role(interaction.guild) in interaction.user.roles:
-      self.close_check = True
-      await interaction.response.defer()
-    else:
-      # Sending private message.
-      await interaction.user.send("You are not a manager of this project therefore cannot finish the task edit.")
-      await interaction.response.defer()
+    self.close_check = True
+    await interaction.response.defer()
 
   @discord.ui.button(label="Assign Member",style=discord.ButtonStyle.primary,row=2)
   async def assign_member(self,interaction:discord.Interaction,button:discord.ui.Button):
-    if check_team_manager_project(interaction.user,self.workflow.get_project_by_id(self.task.project),self.guild,self.workflow) or await get_admin_role(interaction.guild) in interaction.user.roles:
-      view = discord.ui.View()
-      # Creating embed.
-      embed = discord.Embed(color=discord.Color.blurple(),description=f"Select a member to assign to the task:")
-      # Creating select menu.
-      select_menu = self.create_member_menu(True,interaction.user)
-      view.add_item(select_menu)
-      # Sending message.
-      await interaction.response.send_message(embed=embed,view=view)
-      # Deleting message after interaction.
-      await self.client.wait_for("interaction")
-      await interaction.delete_original_response()
-    else:
-      # Sending private message.
-      await interaction.user.send("You are not a manager of this project therefore cannot assign a member to this task.")
-      await interaction.response.defer()
+    view = discord.ui.View()
+    # Creating embed.
+    embed = discord.Embed(color=discord.Color.blurple(),description=f"Select a member to assign to the task:")
+    # Creating select menu.
+    select_menu = self.create_member_menu(True,interaction.user)
+    view.add_item(select_menu)
+    # Sending message.
+    await interaction.response.send_message(embed=embed,view=view,ephemeral=True)
+    # Deleting message after interaction.
+    await self.client.wait_for("interaction")
+    await interaction.delete_original_response()
 
   @discord.ui.button(label="Remove Member",style=discord.ButtonStyle.primary,row=2)
   async def remove_member(self,interaction:discord.Interaction,button:discord.Button):
-    if check_team_manager_project(interaction.user,self.workflow.get_project_by_id(self.task.project),self.guild,self.workflow) or await get_admin_role(interaction.guild) in interaction.user.roles:
-      view = discord.ui.View()
-      # Creating embed.
-      embed = discord.Embed(color=discord.Color.blurple(),description=f"Select a member to remove from the task:")
-      # Creating select menu.
-      select_menu = self.create_member_menu(False,interaction.user)
-      view.add_item(select_menu)
-      # Sending message.
-      await interaction.response.send_message(embed=embed,view=view)
-      # Deleting message after interaction.
-      await self.client.wait_for("interaction")
-      await interaction.delete_original_response()
-    else:
-      # Sending private message.
-      await interaction.user.send("You are not a manager of this project therefore cannot remove a member from this task.")
-      await interaction.response.defer()
+    view = discord.ui.View()
+    # Creating embed.
+    embed = discord.Embed(color=discord.Color.blurple(),description=f"Select a member to remove from the task:")
+    # Creating select menu.
+    select_menu = self.create_member_menu(False,interaction.user)
+    view.add_item(select_menu)
+    # Sending message.
+    await interaction.response.send_message(embed=embed,view=view,ephemeral=True)
+    # Deleting message after interaction.
+    await self.client.wait_for("interaction")
+    await interaction.delete_original_response()
 
   @discord.ui.button(label="Add Log", style=discord.ButtonStyle.primary,row=2)
   async def add_log(self,interaction:discord.Interaction,button:discord.Button):
-    if check_team_manager_project(interaction.user,self.workflow.get_project_by_id(self.task.project),self.guild,self.workflow) or await get_admin_role(interaction.guild) in interaction.user.roles:
-      # Sending log modal.
-      await interaction.response.send_modal(AddLogModal(self.task))
-    else:
-      # Sending private message.
-      await interaction.user.send("You are not a manager of this project therefore cannot add a log to this task.")
-      await interaction.response.defer()
+    # Sending log modal.
+    await interaction.response.send_modal(AddLogModal(self.task))
 
   @discord.ui.button(label="Remove Log", style=discord.ButtonStyle.primary,row=2)
   async def remove_log(self,interaction:discord.Interaction,button:discord.Button):
-    if check_team_manager_project(interaction.user,self.workflow.get_project_by_id(self.task.project),self.guild,self.workflow) or await get_admin_role(interaction.guild) in interaction.user.roles:
-      view = discord.ui.View()
-      # Creating embed.
-      embed = discord.Embed(color=discord.Color.blurple(),description=f"Select a log to remove from the task:")
-      # Creating select menu.
-      select_menu = self.create_log_menu(interaction.user)
-      view.add_item(select_menu)
-      # Sending message.
-      await interaction.response.send_message(embed=embed,view=view)
-      # Deleting message after interaction.
-      await self.client.wait_for("interaction")
-      await interaction.delete_original_response()
-    else:
-      # Sending private message.
-      await interaction.user.send("You are not a manager of this project therefore cannot remove a log from this task.")
-      await interaction.response.defer()
+    view = discord.ui.View()
+    # Creating embed.
+    embed = discord.Embed(color=discord.Color.blurple(),description=f"Select a log to remove from the task:")
+    # Creating select menu.
+    select_menu = self.create_log_menu(interaction.user)
+    view.add_item(select_menu)
+    # Sending message.
+    await interaction.response.send_message(embed=embed,view=view,ephemeral=True)
+    # Deleting message after interaction.
+    await self.client.wait_for("interaction")
+    await interaction.delete_original_response()
 
 
 class MemberIndividualTaskView(discord.ui.View):
@@ -313,52 +257,32 @@ class MemberIndividualTaskView(discord.ui.View):
 
   @discord.ui.button(label="Request Approval", style=discord.ButtonStyle.primary)
   async def request_approval(self,interaction:discord.Interaction,button:discord.Button):
-    if check_team_member_task(interaction.user,self.task):
-      # Setting task status.
-      self.task.status = "APPROVAL PENDING"
-      await interaction.response.defer()
-    else:
-      # Sending private message.
-      await interaction.user.send("You are not a member of this task therefore cannot request approval of this task.")
-      await interaction.response.defer()
+    # Setting task status.
+    self.task.status = "APPROVAL PENDING"
+    await interaction.response.defer()
 
   @discord.ui.button(label="Add Log", style=discord.ButtonStyle.primary)
   async def add_log(self,interaction:discord.Interaction,button:discord.Button):
-    if check_team_member_task(interaction.user,self.task):
-      # Sending log modal.
-      await interaction.response.send_modal(AddLogModal(self.task))
-    else:
-      # Sending private message.
-      await interaction.user.send("You are not a member of this task therefore cannot add a log to this task.")
-      await interaction.response.defer()
+    # Sending log modal.
+    await interaction.response.send_modal(AddLogModal(self.task))
 
   @discord.ui.button(label="Remove Log", style=discord.ButtonStyle.primary)
   async def remove_log(self,interaction:discord.Interaction,button:discord.Button):
-    if check_team_member_task(interaction.user,self.task):
-      view = discord.ui.View()
-      # Creating embed.
-      embed = discord.Embed(color=discord.Color.blurple(),description=f"Select a log to remove from the task:")
-      # Creating select menu.
-      select_menu = self.create_log_menu(interaction.user)
-      view.add_item(select_menu)
-      # Sending message.
-      await interaction.response.send_message(embed=embed,view=view)
-      # Deleting message after interaction.
-      await self.client.wait_for("interaction")
-      await interaction.delete_original_response()
-    else:
-      # Sending private message.
-      await interaction.user.send("You are not a member of this task therefore cannot remove a log from this task.")
-      await interaction.response.defer()
+    view = discord.ui.View()
+    # Creating embed.
+    embed = discord.Embed(color=discord.Color.blurple(),description=f"Select a log to remove from the task:")
+    # Creating select menu.
+    select_menu = self.create_log_menu(interaction.user)
+    view.add_item(select_menu)
+    # Sending message.
+    await interaction.response.send_message(embed=embed,view=view,ephemeral=True)
+    # Deleting message after interaction.
+    await self.client.wait_for("interaction")
+    await interaction.delete_original_response()
 
   @discord.ui.button(label="Finish Edit",style=discord.ButtonStyle.success)
   async def finish_edit(self,interaction:discord.Interaction,button:discord.Button):
-    if check_team_member_task(interaction.user,self.task):
-      self.close_check = True
-    else:
-      # Sending private message.
-      await interaction.user.send("You are not a member of this task therefore cannot finish the task edit.")
-      await interaction.response.defer()
+    self.close_check = True
   
 
 class MemberSelectMenu(discord.ui.Select):
@@ -371,25 +295,16 @@ class MemberSelectMenu(discord.ui.Select):
     self.user = user
 
   async def callback(self, interaction: discord.Interaction):
-    if self.user.id == interaction.user.id:
-      for member_title in self.values:
-        member = self.guild.get_member_named(member_title)
-        if self.menu_type:
-          if member.id not in self.task.member_ids:
-            self.task.member_ids.append(member.id)
-            logger.info(f"Assigned {member.name} to ({self.task.name})")
-        else:
-          self.task.member_ids.remove(member.id)
-          logger.info(f"Removed {member.name} from ({self.task.name})")
-      await interaction.response.defer()
-    elif self.user.id != interaction.user.id and check_team_manager_project(interaction.user,self.workflow.get_project_by_id(self.task.project),self.guild,self.workflow):
-      # Sending private message.
-      await interaction.user.send("Please use the `Assign Member` button in order to get your own member selection.")
-      await interaction.response.defer()
-    else:
-      # Sending private message.
-      await interaction.user.send("You are not a manager of this project therefore cannot select members to assign.")
-      await interaction.response.defer()
+    for member_title in self.values:
+      member = self.guild.get_member_named(member_title)
+      if self.menu_type:
+        if member.id not in self.task.member_ids:
+          self.task.member_ids.append(member.id)
+          logger.info(f"Assigned {member.name} to ({self.task.name})")
+      else:
+        self.task.member_ids.remove(member.id)
+        logger.info(f"Removed {member.name} from ({self.task.name})")
+    await interaction.response.defer()
 
 
 class PrioritySelectMenu(discord.ui.Select):
@@ -400,19 +315,10 @@ class PrioritySelectMenu(discord.ui.Select):
     self.user = user
 
   async def callback(self, interaction: discord.Interaction):
-    if self.user.id == interaction.user.id:
-      # Setting priority from selected value.
-      self.task.change_priority(self.values[0])
-      logger.info(f"Changed priority of ({self.task.name}) to {self.values}")
-      await interaction.response.defer()
-    elif self.user.id != interaction.user.id and check_team_manager_project(interaction.user,self.workflow.get_project_by_id(self.task.project),self.guild,self.workflow):
-      # Sending private message.
-      await interaction.user.send("Please use the `Change Priority` button in order to get your own priority selection.")
-      await interaction.response.defer()
-    else:
-      # Sending private message.
-      await interaction.user.send("You are not a manager of this project therefore cannot select a priority to assign to the task.")
-      await interaction.response.defer()
+    # Setting priority from selected value.
+    self.task.change_priority(self.values[0])
+    logger.info(f"Changed priority of ({self.task.name}) to {self.values}")
+    await interaction.response.defer()
 
 
 class StatusSelectMenu(discord.ui.Select):
@@ -423,19 +329,10 @@ class StatusSelectMenu(discord.ui.Select):
     self.user = user
   
   async def callback(self, interaction: discord.Interaction):
-    if self.user.id == interaction.user.id:
-      # Setting status from selected value.
-      self.task.change_status(self.values[0])
-      logger.info(f"Changed status of ({self.task.name}) to {self.values[0]}.")
-      await interaction.response.defer()
-    elif self.user.id != interaction.user.id and check_team_manager_project(interaction.user,self.workflow.get_project_by_id(self.task.project),self.guild,self.workflow):
-      # Sending private message.
-      await interaction.user.send("Please use the `Change Status` button in order to get your own status selection.")
-      await interaction.response.defer()
-    else:
-      # Sending private message.
-      await interaction.user.send("You are not a manager of this project therefore cannot select a status to assign to the task.")
-      await interaction.response.defer()
+    # Setting status from selected value.
+    self.task.change_status(self.values[0])
+    logger.info(f"Changed status of ({self.task.name}) to {self.values[0]}.")
+    await interaction.response.defer()
 
 
 class LogSelectMenu(discord.ui.Select):
@@ -446,15 +343,10 @@ class LogSelectMenu(discord.ui.Select):
     self.user = user
   
   async def callback(self, interaction: discord.Interaction):
-    if self.user.id == interaction.user.id:
-      # Setting deleting selected log.
-      self.task.remove_log(self.values[0])
-      logger.info(f"Deleted log {self.values[0]} from {self.task.name}.")
-      await interaction.response.defer()
-    else:
-      # Sending private message.
-      await interaction.user.send("You did not initiate this action therefore cannot select a log.")
-      await interaction.response.defer()
+    # Setting deleting selected log.
+    self.task.remove_log(self.values[0])
+    logger.info(f"Deleted log {self.values[0]} from {self.task.name}.")
+    await interaction.response.defer()
 
 # - - - - - - - - - - - - - - - - - - - - - -
     
@@ -602,14 +494,14 @@ async def manage_tasks(command,client,workflow):
     available_task_options = create_task_options(available_tasks)
     if len(available_tasks) != 0:
       task_select_menu.placeholder = "Tasks"
-      task_select_menu.max_values = len(available_tasks)
+      task_select_menu.max_values = 1
       task_select_menu.options = available_task_options
       view.add_item(task_select_menu)
       # Sending  message to channel.
-      await command.response.send_message(embed=embed,view=view,delete_after=300)
+      await command.response.send_message(embed=embed,view=view,delete_after=300,ephemeral=True)
     else:
       embed = discord.Embed(color=discord.Color.blurple(),description="No tasks to manage.")
-      await command.response.send_message(embed=embed,delete_after=300)
+      await command.response.send_message(embed=embed,delete_after=300,ephemeral=True)
   else:
     logger.info("Command request approved.")
     channel = command.channel
@@ -622,11 +514,11 @@ async def manage_tasks(command,client,workflow):
     available_task_options = create_task_options(available_tasks)
     if len(available_tasks) != 0:
       task_select_menu.placeholder = "Tasks"
-      task_select_menu.max_values = len(available_tasks)
+      task_select_menu.max_values = 1
       task_select_menu.options = available_task_options
       view.add_item(task_select_menu)
       # Sending  message to channel.
-      await command.response.send_message(embed=embed,view=view,delete_after=300)
+      await command.response.send_message(embed=embed,view=view,delete_after=300,ephemeral=True)
     else:
       embed = discord.Embed(color=discord.Color.blurple(),description="No tasks to manage.")
-      await command.response.send_message(embed=embed,delete_after=300)
+      await command.response.send_message(embed=embed,delete_after=300,ephemeral=True)

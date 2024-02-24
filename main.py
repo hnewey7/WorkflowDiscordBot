@@ -262,7 +262,7 @@ def init_commands(client,tree):
       logger.info("Requesting manage projects by Team Manager command.")
       await commands.manage_projects(interaction,client,workflows[str(interaction.guild.id)])
     elif isinstance(error, discord.app_commands.MissingRole):
-      await interaction.response.send_message("You do not have the necessary role to use this command.")
+      await interaction.response.send_message("You do not have the necessary role to use this command.",ephemeral=True)
 
 
   @tree.command(name="manage_tasks",description="Allows tasks to be selected and managed.")
