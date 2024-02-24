@@ -12,7 +12,7 @@ from .active_channel import restart_looping,set_active_channel_command, init_act
 from .teams import display_teams    
 from .manage_projects import manage_projects
 from .manage_task import manage_tasks
-from .misc import help_command,disconnect_command, show_workflow_command, show_guild_command, delete_roles_command
+from .misc import help_command,disconnect_command, show_workflow_command, show_guild_command, delete_roles_command, tutorial_command
 
 
 # Initialising commands.
