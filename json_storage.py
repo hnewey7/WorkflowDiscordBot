@@ -47,7 +47,8 @@ def save_to_json(workflows):
         try:
           serialized_tasks.append(vars(task))
         except:
-          print(task)
+          logger.info("Failed attempt to save to JSON, already serialized.")
+          return
       serialized_project.tasks = serialized_tasks
       # Adding project dictionary.
       projects_dictionary[project.id] = vars(serialized_project)

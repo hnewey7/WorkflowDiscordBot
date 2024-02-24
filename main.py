@@ -74,6 +74,16 @@ def init_events(client,tree):
         logger.info("Initialising message looping.")
         await init_message_looping(client)
         
+    # On resumed event.
+    @client.event
+    async def on_resumed():
+      # Resuming saved data.
+      logger.info("Resuming saved data.")
+      await init_saved(client)
+
+      # Resuming active message looping.
+      logger.info("Resuming message looping.")
+      await init_message_looping(client)
 
     # On guild join event.
     @client.event
@@ -181,6 +191,7 @@ def init_events(client,tree):
     async def on_disconnect():
       # Saving data to json.
       save_to_json(workflows)
+      logger.info("- - - - - - - - - - - - - - - - - - - - - -")
 
     @client.event
     async def on_ready():
