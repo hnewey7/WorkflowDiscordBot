@@ -287,14 +287,14 @@ async def init_saved(client):
     try:
         # Loading json.
         json_file = open('server_workflows.json',)
-        workflows_json = json.load(json_file)
+        workflows_import = json.load(json_file)
         load_check = True
     except:
         # Creating new dictionary.
         workflows = {}
 
     if load_check:
-        workflows = await convert_from_json(workflows_json, client)
+        workflows = await convert_from_json(workflows_import, client)
 
 
 async def init_message_looping(client):
