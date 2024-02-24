@@ -106,7 +106,7 @@ class AddTeamModal(discord.ui.Modal,title="New Team"):
         manager_colour = discord.Color.from_rgb(new_rgb[0],new_rgb[1],new_rgb[2])
 
         # Creating new role in guild.
-        new_role = await interaction.guild.create_role(name=self.title_input.value,color=team_colour)
+        new_role = await interaction.guild.create_role(name=self.title_input.value,color=team_colour,hoist=True)
         logger.info(f"New role created for team ({new_role.name}).")
         # Creating new manager role in guild.
         manager_role =  await interaction.guild.create_role(name=self.title_input.value + " Manager",color=manager_colour)
