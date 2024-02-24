@@ -175,17 +175,6 @@ def init_events(client,tree):
         workflows.pop(str(guild.id))
         logger.info("Removing guild from workflows dictionary.")
         logger.info("- - - - - - - - - - - - - - - - - - - - - -")
-
-    '''
-    # On message event.
-    @client.event
-    async def on_message(message):
-        logger.info("- - - - - - - - - - - - - - - - - - - - - -")
-        logger.info(f"Message sent in {message.guild.name} {message.channel.name}.")
-        if len(message.content) > 0 and message.content[0] == "!":
-            logger.info(f"Command requested in {message.guild.name} {message.channel.name}.")
-            await commands.evaluate_command(message,temp_client,workflows[str(message.guild.id)],tree)
-    '''
             
     # On disconnect event.
     @client.event
