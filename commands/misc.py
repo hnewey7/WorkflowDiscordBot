@@ -27,7 +27,7 @@ async def help_command(interaction,workflow):
     if manager_roles:
       manager_mentions += ""
 
-    embed.add_field(name="`/tutorial`", value=f"Displays a tutorial to help explain the commands for the WorkflowBot",inline=False)
+    embed.add_field(name="`/tutorial`", value=f"Displays a tutorial to help explain the commands for the WorkflowBot.",inline=False)
     embed.add_field(name="`/set_active_channel`", value=f"***Required {admin_role.mention}***\nSets the current channel to the active channel and displays all existing projects in the workflow. Allows the {admin_role.mention} to add, edit and delete projects and tasks.",inline=False)
     embed.add_field(name="`/teams`", value=f"***Required {admin_role.mention}***\nDisplays all existing teams on the server and allows the {admin_role.mention} to add, edit and delete teams.",inline=False)
     embed.add_field(name="`/manage_projects`", value=f"***Required {admin_role.mention} {manager_mentions}\n***Allows projects to be selected and displays all information about them. Changes can be made to each project including editing project properties, managing tasks and archiving completed tasks. {admin_role.mention} are able to manage teams assigned to each project and finish the project.",inline=False)
