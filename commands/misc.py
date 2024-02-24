@@ -27,6 +27,7 @@ async def help_command(interaction,workflow):
     if manager_roles:
       manager_mentions += ""
 
+    embed.add_field(name="`/tutorial`", value=f"Displays a tutorial to help explain the commands for the WorkflowBot",inline=False)
     embed.add_field(name="`/set_active_channel`", value=f"***Required {admin_role.mention}***\nSets the current channel to the active channel and displays all existing projects in the workflow. Allows the {admin_role.mention} to add, edit and delete projects and tasks.",inline=False)
     embed.add_field(name="`/teams`", value=f"***Required {admin_role.mention}***\nDisplays all existing teams on the server and allows the {admin_role.mention} to add, edit and delete teams.",inline=False)
     embed.add_field(name="`/manage_projects`", value=f"***Required {admin_role.mention} {manager_mentions}\n***Allows projects to be selected and displays all information about them. Changes can be made to each project including editing project properties, managing tasks and archiving completed tasks. {admin_role.mention} are able to manage teams assigned to each project and finish the project.",inline=False)
@@ -34,6 +35,34 @@ async def help_command(interaction,workflow):
 
     # Sending message.
     await interaction.response.send_message(embed=embed,ephemeral=False,delete_after=300)
+
+# Tutorial command.
+async def tutorial_command(interaction,workflow):
+  # Getting guild.
+  guild = interaction.guild
+  # Creating embed.
+  embed = discord.Embed(colour=discord.Colour.blurple(),title="Tutorial",description="Available roles and what commands they can use.")
+  # Creating fields for each command.
+  admin_role = await get_admin_role(guild)
+  manager_roles = get_team_manager_roles(guild,workflow)
+  member_roles = get_team_member_roles(guild,workflow)
+
+  # Creating team manager mentions.
+  manager_mentions = ""
+  for manager_role in manager_roles:
+    manager_mentions += manager_role.mention + " "
+  
+  # Creating team member mentions.
+  member_mentions = ""
+  for member_role in member_roles:
+    member_mentions += member_role.mention + " "
+
+  embed.add_field(name="**Workflow Manager**",value=f"{admin_role.mention}\nThe top level role for managing the WorkflowBot.\n1. Initially the {admin_role.mention} should create the active channel through `/set_active_channel`, this will set the channel to read only and display all exisitng exisitng projects.\n2. From here new projects can be created and then further managed by `/manage_projects`. {admin_role.mention} have the ability to manage all existing projects.\n3. In order to manage teams, `/teams` can be used. Team member and manager roles are created with each team.",inline=True)
+  embed.add_field(name="**Team Managers**",value=f"{manager_mentions}\nManager role created for each team.\n1. Use `/manage_projects` to manage specific projects assigned to your team, aiding in task distribution and management. If no projects have been assigned to your team please contact your Workflow Manager.\n2. View and manage all tasks within any projects assigned to your team with `/manage_tasks`.",inline=True)
+  embed.add_field(name="**Team Member**",value=f"{member_mentions}\nStandard team member role.\n1. To manage individual tasks assigned to you, use `/manage_task`. If no tasks have been assigned to you please contact your team manager.",inline=True)
+
+  # Sending message.
+  await interaction.response.send_message(embed=embed,ephemeral=False,delete_after=300)
 
 # Disconnect command.
 async def disconnect_command(client):
@@ -78,6 +107,14 @@ def get_team_manager_roles(guild,workflow):
   for team in workflow.teams:
     manager_roles.append(guild.get_role(team.manager_role_id))
   return manager_roles
+
+# Getting each team role.
+def get_team_member_roles(guild,workflow):
+  member_roles = []
+  # Getting member role id from each team.
+  for team in workflow.teams:
+    member_roles.append(guild.get_role(team.role_id))
+  return member_roles
 
 # Get all projects for a member.
 def get_projects_for_member(member,workflow):

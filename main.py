@@ -213,7 +213,19 @@ def init_commands(client,tree):
   async def on_help_error(interaction:discord.Interaction, error:discord.app_commands.AppCommandError):
     if isinstance(error, discord.app_commands.CommandOnCooldown):
       await interaction.response.send_message("Please wait before sending the `/help` command again.",ephemeral=True)
-  
+
+
+  @tree.command(name="tutorial",description="Provides a tutorial to explain how the bot works to users.")
+  @discord.app_commands.checks.cooldown(1,300)
+  async def tutorial_command(interaction):
+    logger.info("Requesting tutorial command.")
+    await commands.tutorial_command(interaction,workflows[str(interaction.guild.id)])
+
+  @tutorial_command.error
+  async def on_tutorial_error(interaction:discord.Interaction, error:discord.app_commands.AppCommandError):
+    if isinstance(error, discord.app_commands.CommandOnCooldown):
+      await interaction.response.send_message("Please wait before sending the `/tutorial` command again.",ephemeral=True)
+
 
   @tree.command(name="set_active_channel",description="Sets the current channel to the active channel and displays all existing projects in the workflow.")
   @discord.app_commands.checks.has_role("Workflow Manager")
