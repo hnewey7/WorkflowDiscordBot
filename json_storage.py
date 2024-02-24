@@ -19,7 +19,6 @@ logger = logging.getLogger()
 # - - - - - - - - - - - - - - - - - - -
 
 def save_to_json(workflows):
-  logger.info("- - - - - - - - - - - - - - - - - - - - - -")
   logging.info("Saving workflows as json file.")
 
   # Creating new structure for storing as json.
@@ -41,13 +40,17 @@ def save_to_json(workflows):
 
 
     for project in workflows[server_id].projects:
+      serialized_project = project
       # Serializing tasks.
       serialized_tasks = []
       for task in project.tasks:
-        serialized_tasks.append(vars(task))
-      project.tasks = serialized_tasks
+        try:
+          serialized_tasks.append(vars(task))
+        except:
+          print(task)
+      serialized_project.tasks = serialized_tasks
       # Adding project dictionary.
-      projects_dictionary[project.id] = vars(project)
+      projects_dictionary[project.id] = vars(serialized_project)
     
 
     for team in workflows[server_id].teams:
