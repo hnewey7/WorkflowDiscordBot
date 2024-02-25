@@ -94,6 +94,9 @@ class ProjectSelectMenu(discord.ui.Select):
               task_members_mention += member.mention 
             task_list += f'{index}. {task.name} Due <t:{task.get_unix_deadline()}:R> {task_members_mention}\n' if task.deadline and task.status != "COMPLETED" else \
             f'{index}. {task.name} {task_status} {task_members_mention}\n'
+          
+        if index == 0:
+          task_list += "No tasks."
       else:
         task_list += "No tasks."
       embed.add_field(name="Tasks:",value=task_list,inline=False)
@@ -322,86 +325,40 @@ class TeamManagerIndividualProjectView(discord.ui.View):
 
   @discord.ui.button(label="Request Approval",style=discord.ButtonStyle.primary)
   async def request_completion(self,interaction:discord.Interaction,button:discord.ui.Button):
-    if check_team_manager_project(interaction.user,self.project,self.guild,self.workflow):
-      # Changing project status to APPROVAL PENDING.
-      self.project.status = "APPROVAL PENDING"
-      await interaction.response.defer()
-    else:
-      # Sending private message.
-      await interaction.user.send("You do not have the necessary role to request project approval.")
-      await interaction.response.defer()
+    # Changing project status to APPROVAL PENDING.
+    self.project.status = "APPROVAL PENDING"
+    await interaction.response.defer()
 
   @discord.ui.button(label="Archive Completed",style=discord.ButtonStyle.primary)
   async def archive_completed(self,interaction:discord.Interaction,button:discord.ui.Button):
-    if check_team_manager_project(interaction.user,self.project,self.guild,self.workflow):
-      # Setting all completed tasks to archive.
-      for task in self.project.tasks:
-        if task.status == "COMPLETED":
-          task.archive = True
-      await interaction.response.defer()
-    else:
-      # Sending private message.
-      await interaction.user.send("You do not have the necessary role to archive completed tasks.")
-      await interaction.response.defer()
+    # Setting all completed tasks to archive.
+    for task in self.project.tasks:
+      if task.status == "COMPLETED":
+        task.archive = True
+    await interaction.response.defer()
 
   @discord.ui.button(label="Show Archive",style=discord.ButtonStyle.primary)
   async def show_archive(self,interaction:discord.Interaction,button:discord.ui.Button):
-    if check_team_manager_project(interaction.user,self.project,self.guild,self.workflow):
-      self.archive_check = True
-      await interaction.response.defer()
-    else:
-      # Sending private message.
-      await interaction.user.send("You do not have the necessary role to show archived tasks.")
-      await interaction.response.defer()
-
-  @discord.ui.button(label="Hide Archive",style=discord.ButtonStyle.primary)
-  async def hide_archive(self,interaction:discord.Interaction,button:discord.ui.Button):
-    if check_team_manager_project(interaction.user,self.project,self.guild,self.workflow):
-      self.archive_check = False
-      await interaction.response.defer()
-    else:
-      # Sending private message.
-      await interaction.user.send("You do not have the necessary role to hide archived tasks.")
-      await interaction.response.defer()
+    await send_archive_display(interaction,self.project,self.guild,self.client,self.workflow)
 
   @discord.ui.button(label="Finish Edit",style=discord.ButtonStyle.success)
   async def finish_edit(self,interaction:discord.Interaction,button:discord.ui.Button):
-    if check_team_manager_project(interaction.user,self.project,self.guild,self.workflow):
-      self.close_check = True
-    else:
-      # Sending private message.
-      await interaction.user.send("You do not have the necessary role to finish the project edit.")
-      await interaction.response.defer()
+    self.close_check = True
 
   @discord.ui.button(label="Add Task",style=discord.ButtonStyle.primary,row=2)
   async def add_task(self,interaction:discord.Interaction,button:discord.ui.Button):
-    if check_team_manager_project(interaction.user,self.project,self.guild,self.workflow):
-    # Sending add task modal.
-      await interaction.response.send_modal(AddTaskModal(project=self.project))
-    else:
-      # Sending private message.
-      await interaction.user.send("You do not have the necessary role to add a task to the project.")
-      await interaction.response.defer()
-  
+  # Sending add task modal.
+    await interaction.response.send_modal(AddTaskModal(project=self.project))
+
   @discord.ui.button(label="Edit Task",style=discord.ButtonStyle.primary,row=2)
   async def edit_task(self,interaction:discord.Interaction,button:discord.ui.Button):
-    if check_team_manager_project(interaction.user,self.project,self.guild,self.workflow):
-      # Sending edit task modal.
-     await interaction.response.send_modal(EditTaskModal(self.project,self.guild,self.client,self.workflow,self.command))
-    else:
-      # Sending private message.
-      await interaction.user.send("You do not have the necessary role to edit a task in the project.")
-      await interaction.response.defer()
+    # Sending edit task modal.
+    await interaction.response.send_modal(EditTaskModal(self.project,self.guild,self.client,self.workflow,self.command))
 
   @discord.ui.button(label="Delete Task",style=discord.ButtonStyle.primary,row=2)
   async def delete_task(self,interaction:discord.Interaction,button:discord.ui.Button):
-    if check_team_manager_project(interaction.user,self.project,self.guild,self.workflow):
-      # Sending delete task modal.
-      await interaction.response.send_modal(DelTaskModal(project=self.project))
-    else:
-      # Sending private message.
-      await interaction.user.send("You do not have the necessary role to delete a task from the project.")
-      await interaction.response.defer()
+    # Sending delete task modal.
+    await interaction.response.send_modal(DelTaskModal(project=self.project))
 
 
 class TeamSelectMenu(discord.ui.Select):
