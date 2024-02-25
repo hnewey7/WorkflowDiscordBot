@@ -12,6 +12,7 @@ import logging
 import asyncio
 
 from discord.interactions import Interaction
+from .log_message import send_log_message
 from .misc import get_admin_role, check_team_manager, check_team_manager_project, check_team_member_task
 
 # - - - - - - - - - - - - - - - - - - - - - -
@@ -73,14 +74,6 @@ class TaskSelectMenu(discord.ui.Select):
       else:
         description = "No members."
       embed.add_field(name="Current members:",value=description,inline=True)
-      # Adding log to message.
-      if len(task.logs.keys()) != 0:
-        log_list = ""
-        for log_date in task.logs.keys():
-          # Getting log author.
-          log_author = self.guild.get_member(task.logs[log_date][1])
-          log_list += f"`{log_date}` {task.logs[log_date][0]} {log_author.mention}\n"
-        embed.add_field(name="Log:",value=log_list,inline=False)
 
       if self.manager_check:
         view = ManagerIndividualTaskView(task,self.guild,self.client,self.workflow,self.command.user)
@@ -91,6 +84,8 @@ class TaskSelectMenu(discord.ui.Select):
         available_members = get_member_selection(task,self.workflow,self.guild,False)
         if len(available_members) == 0:
           view.remove_member.disabled = True
+        if len(task.logs.keys()) == 0:
+          view.show_log.disabled = True
       else:
         view = MemberIndividualTaskView(task,self.guild,self.client,self.workflow,self.command.user)
 
@@ -217,24 +212,10 @@ class ManagerIndividualTaskView(discord.ui.View):
     await self.client.wait_for("interaction")
     await interaction.delete_original_response()
 
-  @discord.ui.button(label="Add Log", style=discord.ButtonStyle.primary,row=2)
-  async def add_log(self,interaction:discord.Interaction,button:discord.Button):
-    # Sending log modal.
-    await interaction.response.send_modal(AddLogModal(self.task))
-
-  @discord.ui.button(label="Remove Log", style=discord.ButtonStyle.primary,row=2)
-  async def remove_log(self,interaction:discord.Interaction,button:discord.Button):
-    view = discord.ui.View()
-    # Creating embed.
-    embed = discord.Embed(color=discord.Color.blurple(),description=f"Select a log to remove from the task:")
-    # Creating select menu.
-    select_menu = self.create_log_menu(interaction.user)
-    view.add_item(select_menu)
-    # Sending message.
-    await interaction.response.send_message(embed=embed,view=view,ephemeral=True)
-    # Deleting message after interaction.
-    await self.client.wait_for("interaction")
-    await interaction.delete_original_response()
+  @discord.ui.button(label="Show Log",style=discord.ButtonStyle.primary,row=2)
+  async def show_log(self,interaction:discord.Interaction,button:discord.Button):
+    # Sending log message.
+    await send_log_message(interaction,self.task,self.client,self.guild,self.workflow)
 
 
 class MemberIndividualTaskView(discord.ui.View):
@@ -261,24 +242,10 @@ class MemberIndividualTaskView(discord.ui.View):
     self.task.status = "APPROVAL PENDING"
     await interaction.response.defer()
 
-  @discord.ui.button(label="Add Log", style=discord.ButtonStyle.primary)
-  async def add_log(self,interaction:discord.Interaction,button:discord.Button):
-    # Sending log modal.
-    await interaction.response.send_modal(AddLogModal(self.task))
-
-  @discord.ui.button(label="Remove Log", style=discord.ButtonStyle.primary)
-  async def remove_log(self,interaction:discord.Interaction,button:discord.Button):
-    view = discord.ui.View()
-    # Creating embed.
-    embed = discord.Embed(color=discord.Color.blurple(),description=f"Select a log to remove from the task:")
-    # Creating select menu.
-    select_menu = self.create_log_menu(interaction.user)
-    view.add_item(select_menu)
-    # Sending message.
-    await interaction.response.send_message(embed=embed,view=view,ephemeral=True)
-    # Deleting message after interaction.
-    await self.client.wait_for("interaction")
-    await interaction.delete_original_response()
+  @discord.ui.button(label="Show Log",style=discord.ButtonStyle.primary)
+  async def show_log(self,interaction:discord.Interaction,button:discord.Button):
+    # Sending log message.
+    await send_log_message(interaction,self.task,self.client,self.guild,self.workflow)
 
   @discord.ui.button(label="Finish Edit",style=discord.ButtonStyle.success)
   async def finish_edit(self,interaction:discord.Interaction,button:discord.Button):

@@ -591,14 +591,6 @@ async def send_edit_task_message(task,guild,client,workflow,command,interaction)
     else:
       description = "No members."
     embed.add_field(name="Current members:",value=description,inline=True)
-    # Adding log to message.
-    if len(task.logs.keys()) != 0:
-      log_list = ""
-      for log_date in task.logs.keys():
-        # Getting log author.
-        log_author = guild.get_member(task.logs[log_date][1])
-        log_list += f"`{log_date}` {task.logs[log_date][0]} {log_author.mention}\n"
-      embed.add_field(name="Log:",value=log_list,inline=False)
 
     view = ManagerIndividualTaskView(task,guild,client,workflow,command.user)
 
