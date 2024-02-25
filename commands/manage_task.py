@@ -351,37 +351,46 @@ def get_available_tasks(command,workflow,manager_check):
   user = command.user
   # Getting teams from the user's roles.
   teams = []
-  if manager_check:
-    for role in user.roles:
-      for team in workflow.teams:
-        if role.id == team.manager_role_id:
-          teams.append(team)
-  else:
-    for role in user.roles:
-      for team in workflow.teams:
-        if role.id == team.role_id:
-          teams.append(team)
+  manager_teams = []
+
+  # Getting teams from roles.
+  for role in user.roles:
+    for team in workflow.teams:
+      if role.id == team.manager_role_id:
+        manager_teams.append(team)
+      if role.id == team.role_id:
+        teams.append(team)
+
   # Getting project ids from all teams.
   project_ids = []
+  manager_project_ids = []
   for team in teams:
     for project in team.get_projects_from_ids(workflow):
       if project.id not in project_ids:
         project_ids.append(project.id)
+  for manager_team in manager_teams:
+    for project in manager_team.get_projects_from_ids(workflow):
+      if project.id not in manager_project_ids:
+        manager_project_ids.append(project.id)
+
   # Getting projects from project ids.
   projects = []
+  manager_projects = []
   for project_id in project_ids:
     projects.append(workflow.get_project_by_id(project_id))
+  for manager_project_id in manager_project_ids:
+    manager_projects.append(workflow.get_project_by_id(manager_project_id))
+
   # Getting tasks from projects.
   available_tasks = []
-  if manager_check:
-    for project in projects:
-      for task in project.tasks:
-        if not task.archive:
-          available_tasks.append(task)
-  else:
-    for project in projects:
-      for task in project.tasks:
-        if user.id in task.member_ids and not task.archive:
+  for manager_project in manager_projects:
+    for task in manager_project.tasks:
+      if not task.archive:
+        available_tasks.append(task)
+  for project in projects:
+    for task in project.tasks:
+      if user.id in task.member_ids and not task.archive:
+        if task not in available_tasks:
           available_tasks.append(task)
   return available_tasks
 
