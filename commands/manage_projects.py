@@ -22,6 +22,7 @@ import logging
 from discord.interactions import Interaction
 from .misc import get_admin_role, check_team_manager, get_projects_for_member, check_team_manager_project
 from .manage_task import ManagerIndividualTaskView,get_member_selection
+from .archive import send_archive_display
 
 # - - - - - - - - - - - - - - - - - -
 
@@ -113,8 +114,6 @@ class ProjectSelectMenu(discord.ui.Select):
           view.show_archive.disabled = True
         if archive_check:
           view.show_archive.disabled = True
-        else:
-          view.hide_archive.disabled = True
         if len(project.tasks) == 0:
           view.edit_task.disabled = True
           view.delete_task.disabled = True
@@ -127,8 +126,6 @@ class ProjectSelectMenu(discord.ui.Select):
           view.show_archive.disabled = True
         if archive_check:
           view.show_archive.disabled = True
-        else:
-          view.hide_archive.disabled = True
         if len(project.tasks) == 0:
           view.edit_task.disabled = True
           view.delete_task.disabled = True
@@ -284,13 +281,7 @@ class WorkflowManagerIndividualProjectView(discord.ui.View):
 
   @discord.ui.button(label="Show Archive",style=discord.ButtonStyle.primary,row=4)
   async def show_archive(self,interaction:discord.Interaction,button:discord.ui.Button):
-    self.archive_check = True
-    await interaction.response.defer()
-
-  @discord.ui.button(label="Hide Archive",style=discord.ButtonStyle.primary,row=4)
-  async def hide_archive(self,interaction:discord.Interaction,button:discord.ui.Button):
-    self.archive_check = False
-    await interaction.response.defer()
+    await send_archive_display(interaction,self.project,self.guild,self.client,self.workflow)
 
 
   def create_team_menu(self,menu_type:bool,user):
@@ -563,10 +554,9 @@ class EditTaskModal(discord.ui.Modal,title="Edit Task"):
       if not task.archive:
         count += 1
       if count == int(self.number_input.value):
-        break
+        # Creating tasks.
+        await send_edit_task_message(task,self.guild,self.client,self.workflow,self.command,interaction)
     
-    # Creating tasks.
-    await send_edit_task_message(task,self.guild,self.client,self.workflow,self.command,interaction)
 
 # - - - - - - - - - - - - - - - - - -
       
