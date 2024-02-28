@@ -84,8 +84,6 @@ class TaskSelectMenu(discord.ui.Select):
         available_members = get_member_selection(task,self.workflow,self.guild,False)
         if len(available_members) == 0:
           view.remove_member.disabled = True
-        if len(task.logs.keys()) == 0:
-          view.show_log.disabled = True
       else:
         view = MemberIndividualTaskView(task,self.guild,self.client,self.workflow,self.command.user)
 
@@ -117,28 +115,28 @@ class ManagerIndividualTaskView(discord.ui.View):
   def create_member_menu(self,menu_type:bool,user):
     # Getting available members.
     available_members = get_member_selection(self.task,self.workflow,self.guild,menu_type)
-    member_select = MemberSelectMenu(self.guild,self.task,menu_type,user)
+    member_select = MemberSelectMenu(self.guild,self.task,menu_type,user,self.workflow)
     member_select.placeholder = "Members"
     member_select.max_values = len(available_members)
     member_select.options = available_members
     return member_select
   
   def create_priority_menu(self,user):
-    priority_select = PrioritySelectMenu(self.task,user)
+    priority_select = PrioritySelectMenu(self.task,user,self.workflow)
     priority_select.placeholder = "Priority"
     priority_select.max_values = 1
     priority_select.options = get_priority_selection()
     return priority_select
   
   def create_status_menu(self,user):
-    status_select = StatusSelectMenu(self.task,user)
+    status_select = StatusSelectMenu(self.task,user,self.workflow)
     status_select.placeholder = "Status"
     status_select.max_values = 1
     status_select.options = get_status_selection()
     return status_select
   
   def create_log_menu(self,user):
-    log_select = LogSelectMenu(self.task,user)
+    log_select = LogSelectMenu(self.task,user,self.workflow)
     log_select.placeholder = "Status"
     log_select.max_values = 1
     log_select.options = get_log_selection(self.task,self.author,True)
@@ -147,7 +145,7 @@ class ManagerIndividualTaskView(discord.ui.View):
   @discord.ui.button(label="Change Description",style=discord.ButtonStyle.primary)
   async def change_description(self,interaction:discord.Interaction,button:discord.ui.Button):
     # Sending description modal.
-    await interaction.response.send_modal(DescriptionModal(self.task))
+    await interaction.response.send_modal(DescriptionModal(self.task,self.workflow))
 
   @discord.ui.button(label="Change Status",style=discord.ButtonStyle.primary)
   async def change_status(self,interaction:discord.Interaction,button:discord.ui.Button):
@@ -230,7 +228,7 @@ class MemberIndividualTaskView(discord.ui.View):
     self.author = author
 
   def create_log_menu(self,user):
-    log_select = LogSelectMenu(self.task,user)
+    log_select = LogSelectMenu(self.task,user,self.workflow)
     log_select.placeholder = "Status"
     log_select.max_values = 1
     log_select.options = get_log_selection(self.task,self.author,False)
@@ -240,7 +238,12 @@ class MemberIndividualTaskView(discord.ui.View):
   async def request_approval(self,interaction:discord.Interaction,button:discord.Button):
     # Setting task status.
     self.task.status = "APPROVAL PENDING"
-    await interaction.response.defer()
+    
+    # Sending update log in active channel.
+    logger.info("Sending update log in active channel.")  
+    update_embed = discord.Embed(colour=discord.Color.blurple(),description=f"{interaction.user.mention} requested approval for {self.task.name}.")
+    await interaction.response.send_message(embed=update_embed,delete_after=3)
+    await self.workflow.active_channel.send(embed=update_embed,delete_after=60)
 
   @discord.ui.button(label="Show Log",style=discord.ButtonStyle.primary)
   async def show_log(self,interaction:discord.Interaction,button:discord.Button):
@@ -254,12 +257,13 @@ class MemberIndividualTaskView(discord.ui.View):
 
 class MemberSelectMenu(discord.ui.Select):
 
-  def __init__(self,guild,task,menu_type,user):
+  def __init__(self,guild,task,menu_type,user,workflow):
     super().__init__()
     self.guild = guild
     self.task = task
     self.menu_type = menu_type
     self.user = user
+    self.workflow = workflow
 
   async def callback(self, interaction: discord.Interaction):
     for member_title in self.values:
@@ -268,60 +272,90 @@ class MemberSelectMenu(discord.ui.Select):
         if member.id not in self.task.member_ids:
           self.task.member_ids.append(member.id)
           logger.info(f"Assigned {member.name} to ({self.task.name})")
+
+          # Sending update log in active channel.
+          logger.info("Sending update log in active channel.")  
+          update_embed = discord.Embed(colour=discord.Color.blurple(),description=f"{interaction.user.mention} assigned {member.mention} to {self.task.name}.")
+          await interaction.response.send_message(embed=update_embed,delete_after=3)
+          await self.workflow.active_channel.send(embed=update_embed,delete_after=60)
       else:
         self.task.member_ids.remove(member.id)
         logger.info(f"Removed {member.name} from ({self.task.name})")
-    await interaction.response.defer()
+
+        # Sending update log in active channel.
+        logger.info("Sending update log in active channel.")  
+        update_embed = discord.Embed(colour=discord.Color.blurple(),description=f"{interaction.user.mention} removed {member.mention} from {self.task.name}.")
+        await interaction.response.send_message(embed=update_embed,delete_after=3)
+        await self.workflow.active_channel.send(embed=update_embed,delete_after=60)
 
 
 class PrioritySelectMenu(discord.ui.Select):
   
-  def __init__(self,task,user):
+  def __init__(self,task,user,workflow):
     super().__init__()
     self.task = task
     self.user = user
+    self.workflow = workflow
 
   async def callback(self, interaction: discord.Interaction):
     # Setting priority from selected value.
     self.task.change_priority(self.values[0])
     logger.info(f"Changed priority of ({self.task.name}) to {self.values}")
-    await interaction.response.defer()
+    
+    # Sending update log in active channel.
+    logger.info("Sending update log in active channel.")
+    update_embed = discord.Embed(colour=discord.Color.blurple(),description=f"{interaction.user.mention} set {self.task.name}'s priority to {self.task.priority}.")
+    await interaction.response.send_message(embed=update_embed,delete_after=3)
+    await self.workflow.active_channel.send(embed=update_embed,delete_after=60)
 
 
 class StatusSelectMenu(discord.ui.Select):
 
-  def __init__(self,task,user):
+  def __init__(self,task,user,workflow):
     super().__init__()
     self.task = task
     self.user = user
+    self.workflow = workflow
   
   async def callback(self, interaction: discord.Interaction):
     # Setting status from selected value.
     self.task.change_status(self.values[0])
     logger.info(f"Changed status of ({self.task.name}) to {self.values[0]}.")
-    await interaction.response.defer()
+    
+    # Sending update log in active channel.
+    logger.info("Sending update log in active channel.")
+    update_embed = discord.Embed(colour=discord.Color.blurple(),description=f"{interaction.user.mention} set {self.task.name}'s status to {self.task.status}.")
+    await interaction.response.send_message(embed=update_embed,delete_after=3)
+    await self.workflow.active_channel.send(embed=update_embed,delete_after=60)
 
 
 class LogSelectMenu(discord.ui.Select):
 
-  def __init__(self,task,user):
+  def __init__(self,task,user,workflow):
     super().__init__()
     self.task = task
     self.user = user
+    self.workflow = workflow
   
   async def callback(self, interaction: discord.Interaction):
     # Setting deleting selected log.
     self.task.remove_log(self.values[0])
     logger.info(f"Deleted log {self.values[0]} from {self.task.name}.")
-    await interaction.response.defer()
+
+    # Sending update log in active channel.
+    logger.info("Sending update log in active channel.")  
+    update_embed = discord.Embed(colour=discord.Color.blurple(),description=f"{interaction.user.mention} removed a log from {self.task.name}.")
+    await interaction.response.send_message(embed=update_embed,delete_after=3)
+    await self.workflow.active_channel.send(embed=update_embed,delete_after=60)
 
 # - - - - - - - - - - - - - - - - - - - - - -
     
 class DescriptionModal(discord.ui.Modal,title="Change Description"):
 
-  def __init__(self,task):
+  def __init__(self,task,workflow):
     super().__init__()
     self.task = task 
+    self.workflow = workflow
   
   # Requires description input.
   description_input = discord.ui.TextInput(label="Please enter a new task description:",style=discord.TextStyle.long,placeholder="Description",required=True)
@@ -329,7 +363,12 @@ class DescriptionModal(discord.ui.Modal,title="Change Description"):
   async def on_submit(self, interaction: discord.Interaction):
     # Changing description.
     self.task.change_description(self.description_input.value)
-    await interaction.response.defer()
+    
+    # Sending update log in active channel.
+    logger.info("Sending update log in active channel.")
+    update_embed = discord.Embed(colour=discord.Color.blurple(),description=f"{interaction.user.mention} set the description of {self.task.name}.")
+    await interaction.response.send_message(embed=update_embed,delete_after=3)
+    await self.workflow.active_channel.send(embed=update_embed,delete_after=60)
 
 class AddLogModal(discord.ui.Modal,title="Add Log"):
 

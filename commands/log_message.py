@@ -33,7 +33,7 @@ class LogButtonView(discord.ui.View):
     self.close_check = False
 
   def create_log_menu(self,user):
-    log_select = LogSelectMenu(self.task,user)
+    log_select = LogSelectMenu(self.task,user,self.workflow)
     log_select.placeholder = "Status"
     log_select.max_values = 1
 
@@ -45,7 +45,7 @@ class LogButtonView(discord.ui.View):
   @discord.ui.button(label="Add Log", style=discord.ButtonStyle.primary)
   async def add_log(self,interaction:discord.Interaction,button:discord.Button):
     # Sending log modal.
-    await interaction.response.send_modal(AddLogModal(self.task))
+    await interaction.response.send_modal(AddLogModal(self.task,self.workflow))
 
   @discord.ui.button(label="Remove Log", style=discord.ButtonStyle.primary)
   async def remove_log(self,interaction:discord.Interaction,button:discord.Button):
@@ -78,16 +78,22 @@ class LogButtonView(discord.ui.View):
 
 class LogSelectMenu(discord.ui.Select):
 
-  def __init__(self,task,user):
+  def __init__(self,task,user,workflow):
     super().__init__()
     self.task = task
     self.user = user
+    self.workflow = workflow
   
   async def callback(self, interaction: discord.Interaction):
     # Setting deleting selected log.
     self.task.remove_log(self.values[0])
     logger.info(f"Deleted log {self.values[0]} from {self.task.name}.")
-    await interaction.response.defer()
+    
+    # Sending update log in active channel.
+    logger.info("Sending update log in active channel.")  
+    update_embed = discord.Embed(colour=discord.Color.blurple(),description=f"{interaction.user.mention} removed a log from {self.task.name}.")
+    await interaction.response.send_message(embed=update_embed,delete_after=3)
+    await self.workflow.active_channel.send(embed=update_embed,delete_after=60)
 
 
 # - - - - - - - - - - - - - - -
@@ -95,9 +101,10 @@ class LogSelectMenu(discord.ui.Select):
 
 class AddLogModal(discord.ui.Modal,title="Add Log"):
 
-  def __init__(self,task):
+  def __init__(self,task,workflow):
     super().__init__()
-    self.task = task 
+    self.task = task
+    self.workflow = workflow 
   
   # Requires description input.
   description_input = discord.ui.TextInput(label="Please enter a log comment:",style=discord.TextStyle.long,placeholder="Comment",required=True)
@@ -105,7 +112,12 @@ class AddLogModal(discord.ui.Modal,title="Add Log"):
   async def on_submit(self, interaction: discord.Interaction):
     # Add log.
     self.task.add_log(interaction.user,self.description_input.value)
-    await interaction.response.defer()
+    
+    # Sending update log in active channel.
+    logger.info("Sending update log in active channel.")  
+    update_embed = discord.Embed(colour=discord.Color.blurple(),description=f"{interaction.user.mention} added a log to {self.task.name}.")
+    await interaction.response.send_message(embed=update_embed,delete_after=3)
+    await self.workflow.active_channel.send(embed=update_embed,delete_after=60)
 
 # - - - - - - - - - - - - - - -
 

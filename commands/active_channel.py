@@ -65,23 +65,24 @@ class WorkflowButtonView(discord.ui.View):
 
 class ProjectButtonView(discord.ui.View):
 
-    def __init__(self, project,user):
+    def __init__(self, project,user,workflow):
         super().__init__()
         self.project = project
         self.close_check = False
         self.user = user
+        self.workflow = workflow
 
 
     @discord.ui.button(label="Change Title", style=discord.ButtonStyle.primary)
     async def change_title(self, interaction: discord.Interaction, button: discord.ui.Button):
       # Sending edit title modal.
-      await interaction.response.send_modal(EditTitleModal(project=self.project))
+      await interaction.response.send_modal(EditTitleModal(project=self.project,workflow=self.workflow))
 
 
     @discord.ui.button(label="Change Deadline", style=discord.ButtonStyle.primary)
     async def change_deadline(self, interaction: discord.Interaction, button: discord.ui.Button):
       # Sending edit deadline modal.
-      await interaction.response.send_modal(EditDeadlineModal(project=self.project))
+      await interaction.response.send_modal(EditDeadlineModal(project=self.project,workflow=self.workflow))
 
     
     @discord.ui.button(label="Finish Edit",style=discord.ButtonStyle.success)
@@ -93,13 +94,13 @@ class ProjectButtonView(discord.ui.View):
     @discord.ui.button(label="Add Task", style=discord.ButtonStyle.primary,row=2)
     async def add_task(self, interaction: discord.Interaction, button: discord.ui.Button):
       # Sending add task modal.
-      await interaction.response.send_modal(AddTaskModal(project=self.project))
+      await interaction.response.send_modal(AddTaskModal(project=self.project,workflow=self.workflow))
 
 
     @discord.ui.button(label="Delete Task", style=discord.ButtonStyle.primary,row=2)
     async def del_task(self, interaction: discord.Interaction, button: discord.ui.Button):
       # Sending delete task modal.
-      await interaction.response.send_modal(DelTaskModal(project=self.project))
+      await interaction.response.send_modal(DelTaskModal(project=self.project,workflow=self.workflow))
 
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -119,6 +120,12 @@ class AddProjectModal(discord.ui.Modal,title="New Project"):
     async def on_submit(self, interaction: discord.Interaction):
         # Adds new project to workflow.
         self.workflow.add_project(self.title_input.value,self.deadline_input.value)
+
+        # Sending update log in active channel.
+        logger.info("Sending update log in active channel.")
+        update_embed = discord.Embed(colour=discord.Color.blurple(),description=f"{interaction.user.mention} created a new project, {self.title_input.value}.")
+        await self.workflow.active_channel.send(embed=update_embed,delete_after=60)
+
         await interaction.response.defer()
 
 
@@ -168,7 +175,7 @@ class EditProjectModal(discord.ui.Modal,title="Edit Project"):
             # Creating embed.
             embed = discord.Embed(color=discord.Color.blurple(),title=title,description=task_list)
             # Creating view.
-            view = ProjectButtonView(project=project,user=self.user)
+            view = ProjectButtonView(project=project,user=self.user,workflow=self.workflow)
             if len(project.tasks) == 0:
                 view.del_task.disabled = True
             # Checking if initial message.
@@ -197,8 +204,17 @@ class DelProjectModal(discord.ui.Modal,title="Delete Project"):
     number_input = discord.ui.TextInput(label="Please enter a project number:",style=discord.TextStyle.short,placeholder="Number",required=True,max_length=2)
 
     async def on_submit(self, interaction: discord.Interaction):
+        # Getting original title
+        project_title = self.workflow.get_project_by_id(int(self.number_input.value)).name
+
         # Deleting project from workflow.
         self.workflow.del_project(int(self.number_input.value))
+
+        # Sending update log in active channel.
+        logger.info("Sending update log in active channel.")
+        update_embed = discord.Embed(colour=discord.Color.blurple(),description=f"{interaction.user.mention} deleted a project, {project_title}.")
+        await self.workflow.active_channel.send(embed=update_embed,delete_after=60)
+
         await interaction.response.defer()
 
 
@@ -206,9 +222,10 @@ class DelProjectModal(discord.ui.Modal,title="Delete Project"):
 
 class AddTaskModal(discord.ui.Modal,title="Add Task"):
 
-    def __init__(self,project):
+    def __init__(self,project,workflow):
         super().__init__()
         self.project = project
+        self.workflow = workflow
 
     # Requires task name and deadline.
     task_input = discord.ui.TextInput(label="Please enter a task name:",style=discord.TextStyle.short,placeholder="Name",required=True,max_length=100)
@@ -217,10 +234,17 @@ class AddTaskModal(discord.ui.Modal,title="Add Task"):
     async def on_submit(self, interaction: discord.Interaction):
         # Checking if deadline entered.
         if self.deadline_input.value == "":
-            self.project.add_task(self.task_input.value,None)
+            new_task = self.project.add_task(self.task_input.value,None)
         else:
             # Adding task to project.
-            self.project.add_task(self.task_input.value,self.deadline_input.value)
+            new_task = self.project.add_task(self.task_input.value,self.deadline_input.value)
+
+        # Sending update log in active channel.
+        logger.info("Sending update log in active channel.")
+        description = f"{interaction.user.mention} added task, ({new_task.name}), to {self.project.name}." if self.deadline_input.value == "" else f"{interaction.user.mention} added task, ({self.task_input.value} <t:{new_task.get_unix_deadline()}:R>), to {self.project.name}."
+        update_embed = discord.Embed(colour=discord.Color.blurple(),description=description)
+        await self.workflow.active_channel.send(embed=update_embed,delete_after=60)
+
         await interaction.response.defer()
 
 
@@ -228,9 +252,10 @@ class AddTaskModal(discord.ui.Modal,title="Add Task"):
 
 class DelTaskModal(discord.ui.Modal,title="Delete Task"):
 
-    def __init__(self,project):
+    def __init__(self,project,workflow):
         super().__init__()
         self.project = project
+        self.workflow = workflow
 
     # Requires task number to delete.
     number_input = discord.ui.TextInput(label="Please enter a project number:",style=discord.TextStyle.short,placeholder="Project Number",required=True,max_length=2)
@@ -242,7 +267,14 @@ class DelTaskModal(discord.ui.Modal,title="Delete Task"):
           if not task.archive:
             count += 1
           if count == int(self.number_input.value):
+            task_name = task.name
             self.project.tasks.remove(task)
+
+            # Sending update log in active channel.
+            logger.info("Sending update log in active channel.")
+            update_embed = discord.Embed(colour=discord.Color.blurple(),description=f"{interaction.user.mention} deleted task, ({task_name}), from {self.project.name}.")
+            await self.workflow.active_channel.send(embed=update_embed,delete_after=60)
+
             await interaction.response.defer()
 
 
@@ -250,16 +282,26 @@ class DelTaskModal(discord.ui.Modal,title="Delete Task"):
 
 class EditTitleModal(discord.ui.Modal, title="Edit Title"):
     
-    def __init__(self,project):
+    def __init__(self,project,workflow):
         super().__init__()
         self.project = project
+        self.workflow = workflow
 
     # Required new title of project.
     title_input = discord.ui.TextInput(label="Please enter a new project title:",style=discord.TextStyle.short,placeholder="Project Title",required=True,max_length=100)
 
     async def on_submit(self, interaction: discord.Interaction):
+        # Getting original title.
+        original_title = self.project.name
+
         # Changing title of project.
         self.project.name = self.title_input.value
+        
+        # Sending update log in active channel.
+        logger.info("Sending update log in active channel.")
+        update_embed = discord.Embed(colour=discord.Color.blurple(),description=f"{interaction.user.mention} changed a project's title from {original_title} to {self.project.name}.")
+        await self.workflow.active_channel.send(embed=update_embed,delete_after=60)
+
         await interaction.response.defer()
 
 
@@ -267,9 +309,10 @@ class EditTitleModal(discord.ui.Modal, title="Edit Title"):
 
 class EditDeadlineModal(discord.ui.Modal, title="Edit Deadline"):
 
-    def __init__(self,project):
+    def __init__(self,project,workflow):
         super().__init__()
         self.project = project
+        self.workflow = workflow
 
     # Requires new deadline of project.
     deadline_input = discord.ui.TextInput(label="Please enter a new project deadline:",style=discord.TextStyle.short,placeholder="dd mm yyyy",required=True,max_length=10)
@@ -277,6 +320,12 @@ class EditDeadlineModal(discord.ui.Modal, title="Edit Deadline"):
     async def on_submit(self, interaction: discord.Interaction):
         # Changing deadline of project.
         self.project.edit_deadline(self.deadline_input.value)
+
+        # Sending update log in active channel.
+        logger.info("Sending update log in active channel.")
+        update_embed = discord.Embed(colour=discord.Color.blurple(),description=f"{interaction.user.mention} changed {self.project.name}'s deadline to <t:{self.project.get_unix_deadline()}:R>.")
+        await self.workflow.active_channel.send(embed=update_embed,delete_after=60)
+
         await interaction.response.defer()
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -312,7 +361,6 @@ async def set_active_channel_command(interaction, workflow, client):
     while True:
         
         # Creating embed for message.
-        logger.info("Creating embed for active channel.")
         embed = discord.Embed(color=discord.Color.blurple(),title="Existing Projects")
 
         # Creating content of message.
@@ -346,7 +394,6 @@ async def set_active_channel_command(interaction, workflow, client):
             embed.description = 'No existing projects.'
 
         # Creating UI at bottom of message.
-        logger.info("Creating view for active message.")
         view = WorkflowButtonView(workflow=workflow,client=client)
         if len(workflow.projects) == 0:
             view.edit_project.disabled = True

@@ -190,12 +190,12 @@ class WorkflowManagerIndividualProjectView(discord.ui.View):
 
   @discord.ui.button(label="Change Title",style=discord.ButtonStyle.primary)
   async def change_title(self,interaction:discord.Interaction,button:discord.ui.Button):
-    await interaction.response.send_modal(ChangeTitleModal(self.project))
+    await interaction.response.send_modal(ChangeTitleModal(self.project,self.workflow))
 
   @discord.ui.button(label="Change Deadline",style=discord.ButtonStyle.primary)
   async def change_deadline(self,interaction:discord.Interaction,button:discord.ui.Button):
     # Sending modal for changing project deadline.
-    await interaction.response.send_modal(ChangeDeadlineModal(self.project))
+    await interaction.response.send_modal(ChangeDeadlineModal(self.project,self.workflow))
 
   @discord.ui.button(label="Change Status",style=discord.ButtonStyle.primary)
   async def change_status(self,interaction:discord.Interaction,button:discord.ui.Button):
@@ -210,6 +210,7 @@ class WorkflowManagerIndividualProjectView(discord.ui.View):
     await interaction.response.send_message(embed=embed,view=view,ephemeral=True)
     # Deleting message after interaction.
     await self.client.wait_for("interaction")
+
     await interaction.delete_original_response()
 
   @discord.ui.button(label="Change Priority",style=discord.ButtonStyle.primary)
@@ -262,7 +263,7 @@ class WorkflowManagerIndividualProjectView(discord.ui.View):
   @discord.ui.button(label="Add Task",style=discord.ButtonStyle.primary,row=2)
   async def add_task(self,interaction:discord.Interaction,button:discord.ui.Button):
     # Sending add task modal.
-    await interaction.response.send_modal(AddTaskModal(project=self.project))
+    await interaction.response.send_modal(AddTaskModal(project=self.project,workflow=self.workflow))
   
   @discord.ui.button(label="Edit Task",style=discord.ButtonStyle.primary,row=2)
   async def edit_task(self,interaction:discord.Interaction,button:discord.ui.Button):
@@ -272,7 +273,7 @@ class WorkflowManagerIndividualProjectView(discord.ui.View):
   @discord.ui.button(label="Delete Task",style=discord.ButtonStyle.primary,row=2)
   async def delete_task(self,interaction:discord.Interaction,button:discord.ui.Button):
     # Sending delete task modal.
-    await interaction.response.send_modal(DelTaskModal(project=self.project))
+    await interaction.response.send_modal(DelTaskModal(project=self.project,workflow=self.workflow))
 
   @discord.ui.button(label="Archive Completed",style=discord.ButtonStyle.primary,row=4)
   async def archive_completed(self,interaction:discord.Interaction,button:discord.ui.Button):
@@ -290,21 +291,21 @@ class WorkflowManagerIndividualProjectView(discord.ui.View):
   def create_team_menu(self,menu_type:bool,user):
     # Getting available teams.
     available_teams = get_team_selection(self.project,self.workflow,menu_type)
-    member_select = TeamSelectMenu(self.workflow,self.project,menu_type,user)
+    member_select = TeamSelectMenu(self.workflow,self.project,menu_type,user,self.guild)
     member_select.placeholder = "Teams"
     member_select.max_values = len(available_teams)
     member_select.options = available_teams
     return member_select
   
   def create_status_menu(self,user):
-    status_select = StatusSelectMenu(self.project,user)
+    status_select = StatusSelectMenu(self.project,user,self.workflow)
     status_select.placeholder = "Status"
     status_select.max_values = 1
     status_select.options = get_status_selection()
     return status_select
 
   def create_priority_menu(self,user):
-    priority_select = PrioritySelectMenu(self.project,user)
+    priority_select = PrioritySelectMenu(self.project,user,self.workflow)
     priority_select.placeholder = "Priority"
     priority_select.max_values = 1
     priority_select.options = get_priority_selection()
@@ -327,6 +328,13 @@ class TeamManagerIndividualProjectView(discord.ui.View):
   async def request_completion(self,interaction:discord.Interaction,button:discord.ui.Button):
     # Changing project status to APPROVAL PENDING.
     self.project.status = "APPROVAL PENDING"
+
+    # Sending update log in active channel.
+    logger.info("Sending update log in active channel.")
+    update_embed = discord.Embed(colour=discord.Color.blurple(),description=f"{interaction.user.mention} requested approval for {self.project.name}.")
+    await interaction.response.send_message(embed=update_embed,delete_after=3)
+    await self.workflow.active_channel.send(embed=update_embed,delete_after=60)
+    
     await interaction.response.defer()
 
   @discord.ui.button(label="Archive Completed",style=discord.ButtonStyle.primary)
@@ -348,7 +356,7 @@ class TeamManagerIndividualProjectView(discord.ui.View):
   @discord.ui.button(label="Add Task",style=discord.ButtonStyle.primary,row=2)
   async def add_task(self,interaction:discord.Interaction,button:discord.ui.Button):
   # Sending add task modal.
-    await interaction.response.send_modal(AddTaskModal(project=self.project))
+    await interaction.response.send_modal(AddTaskModal(project=self.project,workflow=self.workflow))
 
   @discord.ui.button(label="Edit Task",style=discord.ButtonStyle.primary,row=2)
   async def edit_task(self,interaction:discord.Interaction,button:discord.ui.Button):
@@ -358,89 +366,114 @@ class TeamManagerIndividualProjectView(discord.ui.View):
   @discord.ui.button(label="Delete Task",style=discord.ButtonStyle.primary,row=2)
   async def delete_task(self,interaction:discord.Interaction,button:discord.ui.Button):
     # Sending delete task modal.
-    await interaction.response.send_modal(DelTaskModal(project=self.project))
+    await interaction.response.send_modal(DelTaskModal(project=self.project,workflow=self.workflow))
 
 
 class TeamSelectMenu(discord.ui.Select):
   
-  def __init__(self,workflow,project,menu_type,user):
+  def __init__(self,workflow,project,menu_type,user,guild):
     super().__init__()
     self.workflow = workflow
     self.project = project
     self.menu_type = menu_type
     self.user = user
+    self.guild = guild
 
   async def callback(self, interaction: discord.Interaction):
-    if self.user.id == interaction.user.id:
-      for team_title in self.values:
-        team = self.workflow.get_team_from_name(team_title)
-        if self.menu_type:
-          self.project.add_team(team)
-          logger.info(f"Assigned {team.name} to ({self.project.name})")
-        else:
-          self.project.remove_team(team)
-          logger.info(f"Removed {team.name} from ({self.project.name})")
-      await interaction.response.defer()
-    elif self.user.id != interaction.user.id and await get_admin_role(interaction.guild) in interaction.user.roles:
-      # Sending private message.
-      await interaction.user.send("Please use the `Add Teams` button to generate your own team selection.")
-      await interaction.response.defer()
-    else:
-      # Sending private message.
-      await interaction.user.send("You do not have the necessary permission to assign teams to a project.")
-      await interaction.response.defer()
+    for team_title in self.values:
+      team = self.workflow.get_team_from_name(team_title)
+      if self.menu_type:
+        self.project.add_team(team)
+        logger.info(f"Assigned {team.name} to ({self.project.name})")
+
+        # Sending update log in active channel.
+        logger.info("Sending update log in active channel.")
+        update_embed = discord.Embed(colour=discord.Color.blurple(),description=f"{interaction.user.mention} assigned {self.guild.get_role(team.role_id).mention} to {self.project.name}.")
+        await interaction.response.send_message(embed=update_embed,delete_after=3)
+        await self.workflow.active_channel.send(embed=update_embed,delete_after=60)
+      else:
+        self.project.remove_team(team)
+        logger.info(f"Removed {team.name} from ({self.project.name})")
+
+        # Sending update log in active channel.
+        logger.info("Sending update log in active channel.")
+        update_embed = discord.Embed(colour=discord.Color.blurple(),description=f"{interaction.user.mention} removed {self.guild.get_role(team.role_id).mention} from {self.project.name}.")
+        await interaction.response.send_message(embed=update_embed,delete_after=3)
+        await self.workflow.active_channel.send(embed=update_embed,delete_after=60)
 
 
 class StatusSelectMenu(discord.ui.Select):
 
-  def __init__(self,project,user):
+  def __init__(self,project,user,workflow):
     super().__init__()
     self.project = project
     self.user = user
+    self.workflow = workflow
   
   async def callback(self, interaction: discord.Interaction):
     # Setting status from selected value.
     self.project.change_status(self.values[0])
     logger.info(f"Changed status of ({self.project.name}) to {self.values[0]}.")
-    await interaction.response.defer()
+
+    # Sending update log in active channel.
+    logger.info("Sending update log in active channel.")
+    update_embed = discord.Embed(colour=discord.Color.blurple(),description=f"{interaction.user.mention} set {self.project.name}'s status to {self.project.status}.")
+    await interaction.response.send_message(embed=update_embed,delete_after=3)
+    await self.workflow.active_channel.send(embed=update_embed,delete_after=60)
 
 
 class PrioritySelectMenu(discord.ui.Select):
   
-  def __init__(self,project,user):
+  def __init__(self,project,user,workflow):
     super().__init__()
     self.project = project
     self.user = user
+    self.workflow = workflow
 
   async def callback(self, interaction: discord.Interaction):
     # Setting priority from selected value.
     self.project.change_priority(self.values[0])
     logger.info(f"Changed priority of ({self.project.name}) to {self.values}")
-    await interaction.response.defer()
+
+    # Sending update log in active channel.
+    logger.info("Sending update log in active channel.")
+    update_embed = discord.Embed(colour=discord.Color.blurple(),description=f"{interaction.user.mention} set {self.project.name}'s priority to {self.project.priority}.")
+    await interaction.response.send_message(embed=update_embed,delete_after=3)
+    await self.workflow.active_channel.send(embed=update_embed,delete_after=60)
 
 
 # - - - - - - - - - - - - - - - - - -
     
 class ChangeTitleModal(discord.ui.Modal,title="Change Title"):
 
-  def __init__(self,project):
+  def __init__(self,project,workflow):
     super().__init__()
     self.project = project
+    self.workflow = workflow
 
   # Requires new title.
   title_input = discord.ui.TextInput(label="Please enter a new title:",style=discord.TextStyle.short,placeholder="Title",required=True)
 
   async def on_submit(self, interaction: discord.Interaction) -> None:
+    # Original title.
+    original_title = self.project.name
     # Changing title.
     self.project.name = self.title_input.value
+
+    # Sending update log in active channel.
+    logger.info("Sending update log in active channel.")
+    update_embed = discord.Embed(colour=discord.Color.blurple(),description=f"{interaction.user.mention} set a project's title from {original_title} to {self.project.name}.")
+    await interaction.response.send_message(embed=update_embed,delete_after=3)
+    await self.workflow.active_channel.send(embed=update_embed,delete_after=60)
     await interaction.response.defer()
 
 
 class ChangeDeadlineModal(discord.ui.Modal,title="Change Deadline"):
 
-  def __init__(self,project):
+  def __init__(self,project,workflow):
     super().__init__()
     self.project = project
+    self.workflow = workflow
 
   # Requires new deadline.
   deadline_input = discord.ui.TextInput(label="Please enter a deadline (dd mm yyyy):",style=discord.TextStyle.short,placeholder="dd mm yyyy",required=True,max_length=10)
@@ -448,14 +481,23 @@ class ChangeDeadlineModal(discord.ui.Modal,title="Change Deadline"):
   async def on_submit(self, interaction: discord.Interaction) -> None:
     # Changing title.
     self.project.edit_deadline(self.deadline_input.value)
+
+    # Sending update log in active channel.
+    logger.info("Sending update log in active channel.")
+    update_embed = discord.Embed(colour=discord.Color.blurple(),description=f"{interaction.user.mention} set {self.project.name}'s deadline to <t:{self.project.get_unix_deadline()}:R>.")
+    await interaction.response.send_message(embed=update_embed,delete_after=3)
+    await self.workflow.active_channel.send(embed=update_embed,delete_after=60)
+    await interaction.response.defer()
+
     await interaction.response.defer()
 
 
 class AddTaskModal(discord.ui.Modal,title="Add Task"):
 
-  def __init__(self,project):
+  def __init__(self,project,workflow):
     super().__init__()
     self.project = project
+    self.workflow = workflow
 
   # Requires task name and deadline.
   task_input = discord.ui.TextInput(label="Please enter a task name:",style=discord.TextStyle.short,placeholder="Name",required=True,max_length=100)
@@ -464,18 +506,26 @@ class AddTaskModal(discord.ui.Modal,title="Add Task"):
   async def on_submit(self, interaction: discord.Interaction):
     # Checking if deadline entered.
     if self.deadline_input.value == "":
-      self.project.add_task(self.task_input.value,None)
+      new_task = self.project.add_task(self.task_input.value,None)
     else:
       # Adding task to project.
-      self.project.add_task(self.task_input.value,self.deadline_input.value)
-    await interaction.response.defer()
+      new_task = self.project.add_task(self.task_input.value,self.deadline_input.value)
+
+    # Sending update log in active channel.
+    logger.info("Sending update log in active channel.")
+    description = f"{interaction.user.mention} added task, ({new_task.name}), to {self.project.name}." if self.deadline_input.value == "" else f"{interaction.user.mention} added task, ({self.task_input.value} {self.deadline_input.value}), to {self.project.name}."
+    update_embed = discord.Embed(colour=discord.Color.blurple(),description=description)
+    await interaction.response.send_message(embed=update_embed,delete_after=3)
+    await self.workflow.active_channel.send(embed=update_embed,delete_after=60)
+
 
 
 class DelTaskModal(discord.ui.Modal,title="Delete Task"):
 
-  def __init__(self,project):
+  def __init__(self,project,workflow):
     super().__init__()
     self.project = project
+    self.workflow = workflow
 
   # Requires task number to delete.
   number_input = discord.ui.TextInput(label="Please enter a task number:",style=discord.TextStyle.short,placeholder="Task Number",required=True,max_length=2)
@@ -487,8 +537,14 @@ class DelTaskModal(discord.ui.Modal,title="Delete Task"):
       if not task.archive:
         count += 1
       if count == int(self.number_input.value):
+        task_name = task.name
         self.project.tasks.remove(task)
-        await interaction.response.defer()
+
+        # Sending update log in active channel.
+        logger.info("Sending update log in active channel.")
+        update_embed = discord.Embed(colour=discord.Color.blurple(),description=f"{interaction.user.mention} deleted task, ({task_name}), from {self.project.name}.")
+        await interaction.response.send_message(embed=update_embed,delete_after=3)
+        await self.workflow.active_channel.send(embed=update_embed,delete_after=60)
 
 
 class EditTaskModal(discord.ui.Modal,title="Edit Task"):

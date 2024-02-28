@@ -117,6 +117,13 @@ class AddTeamModal(discord.ui.Modal,title="New Team"):
         self.workflow.teams[self.workflow.teams.index(new_team)].role_id = new_role.id
         self.workflow.teams[self.workflow.teams.index(new_team)].manager_role_id = manager_role.id
         logger.info("Updating role id of team.")
+
+        # Sending update log in active channel.
+        logger.info("Sending update log in active channel.")
+        update_embed = discord.Embed(colour=discord.Color.blurple(),description=f"{interaction.user.mention} created a new team, {new_role.mention}.")
+        await interaction.channel.send(embed=update_embed,delete_after=3)
+        await self.workflow.active_channel.send(embed=update_embed,delete_after=60)
+
         await interaction.response.defer()
 
 
@@ -209,6 +216,12 @@ class DelTeamModal(discord.ui.Modal,title="Delete Team"):
         except:
           logger.info(f"Role could not be deleted, {deleted_team.name}")
 
+        # Sending update log in active channel.
+        logger.info("Sending update log in active channel.")
+        update_embed = discord.Embed(colour=discord.Color.blurple(),description=f"{interaction.user.mention} deleted a team, {deleted_team.name}.")
+        await interaction.channel.send(embed=update_embed,delete_after=3)
+        await self.workflow.active_channel.send(embed=update_embed,delete_after=60)
+
         await interaction.response.defer()
 
 
@@ -225,13 +238,22 @@ class ChangeTitleModal(discord.ui.Modal,title="Change Title"):
     title_input = discord.ui.TextInput(label="Please enter a new title:",style=discord.TextStyle.short,placeholder="Title",required=True,max_length=100)
 
     async def on_submit(self,interaction: discord.Interaction):
+        # Getting original title.
+        original_title = self.workflow.teams[self.workflow.teams.index(self.team)].name
         # Changing title of team.
-        self.workflow.teams[self.workflow.teams.index(self.team)].title = self.title_input.value
+        self.workflow.teams[self.workflow.teams.index(self.team)].name = self.title_input.value
         # Changing title of role.
         await self.role.edit(name=self.title_input.value)
         await self.manager_role.edit(name=self.title_input.value + " Manager")
 
         logging.info("Changing title of role.")
+
+        # Sending update log in active channel.
+        logger.info("Sending update log in active channel.")
+        update_embed = discord.Embed(colour=discord.Color.blurple(),description=f"{interaction.user.mention} changed the title of {original_title} to {self.workflow.teams[self.workflow.teams.index(self.team)].name}.")
+        await interaction.channel.send(embed=update_embed,delete_after=3)
+        await self.workflow.active_channel.send(embed=update_embed,delete_after=60)
+        
         await interaction.response.defer()
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - -
