@@ -57,23 +57,14 @@ class IndividualTeamButtonView(discord.ui.View):
 
     @discord.ui.button(label="Change Title", style=discord.ButtonStyle.primary)
     async def change_title(self, interaction: discord.Interaction, button: discord.ui.Button):
-        if await get_admin_role(interaction.guild) in interaction.user.roles:
-            # Sending add team modal.
-            await interaction.response.send_modal(ChangeTitleModal(self.workflow,self.team,self.role,self.manager_role))
-        else:
-            # Sending private message.
-            await interaction.user.send("You do not have the necessary role to change the title of the team.")
-            await interaction.response.defer()
+      # Sending add team modal.
+      await interaction.response.send_modal(ChangeTitleModal(self.workflow,self.team,self.role,self.manager_role))
+
 
     @discord.ui.button(label="Finish Edit",style=discord.ButtonStyle.success)
     async def finish_edit(self, interaction: discord.Interaction, button: discord.ui.Button):
-        if await get_admin_role(interaction.guild) in interaction.user.roles:
-            # Indicating to close message.
-            self.close_check = True
-        else:
-            # Sending private message.
-            await interaction.user.send("You do not have the necessary role to finish the edit on the team.")
-            await interaction.response.defer()
+      # Indicating to close message.
+      self.close_check = True
 
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - -
