@@ -47,24 +47,95 @@ class TeamsButtonView(discord.ui.View):
 
 class IndividualTeamButtonView(discord.ui.View):
     
-    def __init__(self,workflow,team,role,manager_role):
+    def __init__(self,workflow,team,role,manager_role,guild,client):
         super().__init__()
         self.workflow = workflow
         self.team = team
         self.role = role
         self.manager_role = manager_role
         self.close_check = False
+        self.guild = guild
+        self.client = client
+    
+    async def create_member_menu(self,menu_type:bool):
+      # Getting available members.
+      available_members = await get_member_selection(self.team,self.guild,menu_type)
+      member_select = MemberSelectMenu(self.guild,self.team,menu_type,self.workflow)
+      member_select.placeholder = "Members"
+      member_select.max_values = len(available_members)
+      member_select.options = available_members
+      return member_select
+
+    @discord.ui.button(label="Assign Member", style=discord.ButtonStyle.primary)
+    async def assign_member(self,interaction:discord.Interaction,button:discord.ui.Button):
+      view = discord.ui.View()
+      # Creating embed.
+      embed = discord.Embed(color=discord.Color.blurple(),description=f"Select a member to assign to the team:")
+      # Creating select menu.
+      select_menu = await self.create_member_menu(True)
+      view.add_item(select_menu)
+      # Sending message.
+      await interaction.response.send_message(embed=embed,view=view,ephemeral=True)
+      # Deleting message after interaction.
+      await self.client.wait_for("interaction")
+      await interaction.delete_original_response()
+
+    @discord.ui.button(label="Remove Member", style=discord.ButtonStyle.primary)
+    async def remove_member(self,interaction:discord.Interaction,button:discord.ui.Button):
+      view = discord.ui.View()
+      # Creating embed.
+      embed = discord.Embed(color=discord.Color.blurple(),description=f"Select a member to remove from the team:")
+      # Creating select menu.
+      select_menu = await self.create_member_menu(False)
+      view.add_item(select_menu)
+      # Sending message.
+      await interaction.response.send_message(embed=embed,view=view,ephemeral=True)
+      # Deleting message after interaction.
+      await self.client.wait_for("interaction")
+      await interaction.delete_original_response()
 
     @discord.ui.button(label="Change Title", style=discord.ButtonStyle.primary)
     async def change_title(self, interaction: discord.Interaction, button: discord.ui.Button):
       # Sending add team modal.
       await interaction.response.send_modal(ChangeTitleModal(self.workflow,self.team,self.role,self.manager_role))
 
-
     @discord.ui.button(label="Finish Edit",style=discord.ButtonStyle.success)
     async def finish_edit(self, interaction: discord.Interaction, button: discord.ui.Button):
       # Indicating to close message.
       self.close_check = True
+
+# - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+class MemberSelectMenu(discord.ui.Select):
+
+  def __init__(self,guild,team,menu_type,workflow):
+    super().__init__()
+    self.guild = guild
+    self.team = team
+    self.menu_type = menu_type
+    self.workflow = workflow
+
+  async def callback(self, interaction: discord.Interaction):
+    for member_title in self.values:
+      member = self.guild.get_member_named(member_title)
+      if self.menu_type:
+        await member.add_roles(self.guild.get_role(self.team.role_id))
+        logger.info(f"Assigned {member.name} to ({self.team.name})")
+
+        # Sending update log in active channel.
+        logger.info("Sending update log in active channel.")  
+        update_embed = discord.Embed(colour=discord.Color.blurple(),description=f"{interaction.user.mention} assigned {member.mention} to {self.guild.get_role(self.team.role_id).mention}.")
+        await interaction.response.send_message(embed=update_embed,delete_after=3)
+        await self.workflow.active_channel.send(embed=update_embed,delete_after=60)
+      else:
+        await member.remove_roles(self.guild.get_role(self.team.role_id))
+        logger.info(f"Removed {member.name} from ({self.team.name})")
+
+        # Sending update log in active channel.
+        logger.info("Sending update log in active channel.")  
+        update_embed = discord.Embed(colour=discord.Color.blurple(),description=f"{interaction.user.mention} removed {member.mention} from {self.guild.get_role(self.team.role_id).mention}.")
+        await interaction.response.send_message(embed=update_embed,delete_after=3)
+        await self.workflow.active_channel.send(embed=update_embed,delete_after=60)
 
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -153,7 +224,13 @@ class EditTeamModal(discord.ui.Modal,title="Edit Team"):
             embed = discord.Embed(color=role.color,description=(team_starter+manager_list+member_list))
 
             # Creating view for message.
-            view = IndividualTeamButtonView(self.workflow,team,role,manager_role)
+            view = IndividualTeamButtonView(self.workflow,team,role,manager_role,interaction.guild,self.client)
+
+            # Toggling buttons.
+            if len(await get_member_selection(team,interaction.guild,True)) == 0:
+              view.assign_member.disabled = True
+            if len(await get_member_selection(team,interaction.guild,False)) == 0:
+              view.remove_member.disabled = True
 
             if initial_check:
                 await interaction.response.send_message(embed=embed,view=view,delete_after=300,ephemeral=True)
@@ -246,6 +323,28 @@ class ChangeTitleModal(discord.ui.Modal,title="Change Title"):
         await self.workflow.active_channel.send(embed=update_embed,delete_after=60)
         
         await interaction.response.defer()
+
+# - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+async def get_member_selection(team,guild,menu_type):
+  # Getting members.
+  member_selection = []
+  if menu_type:
+    async for member in guild.fetch_members():
+      if guild.get_role(team.role_id) not in member.roles:
+        member_selection.append(member)
+  else:
+    async for member in guild.fetch_members():
+      if guild.get_role(team.role_id) in member.roles:
+        member_selection.append(member)
+ 
+  # Creating discord options.
+  member_selection_options = []
+  for member in member_selection:
+    option = discord.SelectOption(label=member.name)
+    member_selection_options.append(option)
+
+  return member_selection_options
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - -
 
