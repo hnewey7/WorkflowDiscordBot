@@ -371,7 +371,10 @@ async def set_active_channel_command(interaction, workflow, client):
                 # Creating task list for field.
                 task_list = ""
                 for team in project.get_teams_from_ids(workflow):
-                  task_list += f"{guild.get_role(team.role_id).mention} "
+                  try:
+                    task_list += f"{guild.get_role(team.role_id).mention} "
+                  except Exception as e:
+                    logger.info(e)
                 if len(project.get_teams_from_ids(workflow)) != 0:
                   task_list += "\n"
                 if len(project.tasks) != 0:
@@ -382,7 +385,7 @@ async def set_active_channel_command(interaction, workflow, client):
                         if task.status:
                           task_status += f"**`{task.status}`**"
                         for member_id in task.member_ids:
-                            member = await workflow.active_message.guild.fetch_member(member_id)
+                            member = await workflow.active_channel.guild.fetch_member(member_id)
                             task_members_mention += member.mention 
                         task_list += f'- {task.name} - *Due <t:{task.get_unix_deadline()}:R>* {task_members_mention}\n' if task.deadline and task.status != "COMPLETED" else \
                     f'- {task.name} {task_status} {task_members_mention}\n'
