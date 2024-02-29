@@ -359,63 +359,77 @@ async def display_teams(interaction, workflow, client):
     initial_check = True
     # Sending teams embed.
     while True:
-        # Creating embed for message.
-        embed = discord.Embed(color=discord.Color.blurple(),title="Teams")  
+        try:
+            # Creating embed for message.
+            embed = discord.Embed(color=discord.Color.blurple(),title="Teams")  
 
-        # Creating content of message.
-        if len(workflow.teams) != 0:
-            for team in workflow.teams:
-                # Getting roles from team's role id.
-                team_role = guild.get_role(team.role_id)
-                manager_role = guild.get_role(team.manager_role_id)
-                while True:
-                    if team_role == None:
-                        team_role = guild.get_role(team.role_id)
-                        manager_role = guild.get_role(team.manager_role_id)
-                        await asyncio.sleep(0.2)
-                    else:
-                        break
-                # Creating task list for field.
-                team_starter = f"**{workflow.teams.index(team)+1}.{team_role.mention}**\n"
-                member_list = ""
-                manager_list = ""
-                if len(team_role.members) != 0:
-                    for member in team_role.members:
-                      if member not in manager_role.members:
-                        member_list += f'- {member.name}\n'
+            # Creating content of message.
+            if len(workflow.teams) != 0:
+                for team in workflow.teams:
+                    # Getting roles from team's role id.
+                    team_role = guild.get_role(team.role_id)
+                    manager_role = guild.get_role(team.manager_role_id)
+                    attempt = 0
+                    while True:
+                        if team_role == None and attempt < 5:
+                            team_role = guild.get_role(team.role_id)
+                            manager_role = guild.get_role(team.manager_role_id)
+                            attempt += 1
+                            await asyncio.sleep(0.2)
+                        else:
+                            break
+                    
+                    if team_role:
+                      # Creating task list for field.
+                      team_starter = f"**{workflow.teams.index(team)+1}.{team_role.mention}**\n"
+                      member_list = ""
+                      manager_list = ""
+                      if len(team_role.members) != 0:
+                          for member in team_role.members:
+                            if member not in manager_role.members:
+                              member_list += f'- {member.name}\n'
+                            else:
+                              manager_list += f'- {member.name} - **Manager**\n'
                       else:
-                        manager_list += f'- {member.name} - **Manager**\n'
-                else:
-                    member_list += "No members."
-                embed.add_field(name="",value=(team_starter+manager_list+member_list),inline=False)
-        else:
-            embed.description = 'No existing teams.'
-        
-        # Creating button view.
-        view = TeamsButtonView(workflow,client)
-        if len(workflow.teams) == 0:  
-            view.edit_team.disabled = True
-            view.delete_team.disabled = True
+                          member_list += "No members."
+                    else:
+                      team_starter = f"**{workflow.teams.index(team)+1}.{team.name}**\n"
+                      manager_list = ""
+                      member_list = "No members."
 
-        # Updating message.
-        if initial_check:
-            await interaction.response.send_message(embed=embed,view=view,delete_after=300,ephemeral=True)
-            initial_check = False
-            # Waiting for either interaction or role update.
-            interaction_task = asyncio.create_task(client.wait_for('interaction'))
-            member_task = asyncio.create_task(client.wait_for('member_update'))
-            role_task = asyncio.create_task(client.wait_for('guild_role_delete'))
-            await asyncio.wait([interaction_task,member_task,role_task],return_when=asyncio.FIRST_COMPLETED)
-            await asyncio.sleep(1)
-        else:
-            # Waiting for either interaction or role update.
-            await interaction.edit_original_response(embed=embed,view=view)
-            interaction_task = asyncio.create_task(client.wait_for('interaction'))
-            member_task = asyncio.create_task(client.wait_for('member_update'))
-            role_task = asyncio.create_task(client.wait_for('guild_role_delete'))
-            await asyncio.wait([interaction_task,member_task,role_task],return_when=asyncio.FIRST_COMPLETED)
-            await asyncio.sleep(1)
+                    embed.add_field(name="",value=(team_starter+manager_list+member_list),inline=False)
 
-        if view.close_check:
-          await interaction.delete_original_response()
-          break
+            else:
+                embed.description = 'No existing teams.'
+            
+            # Creating button view.
+            view = TeamsButtonView(workflow,client)
+            if len(workflow.teams) == 0:  
+                view.edit_team.disabled = True
+                view.delete_team.disabled = True
+
+            # Updating message.
+            if initial_check:
+                await interaction.response.send_message(embed=embed,view=view,delete_after=300,ephemeral=True)
+                initial_check = False
+                # Waiting for either interaction or role update.
+                interaction_task = asyncio.create_task(client.wait_for('interaction'))
+                member_task = asyncio.create_task(client.wait_for('member_update'))
+                role_task = asyncio.create_task(client.wait_for('guild_role_delete'))
+                await asyncio.wait([interaction_task,member_task,role_task],return_when=asyncio.FIRST_COMPLETED)
+                await asyncio.sleep(1)
+            else:
+                # Waiting for either interaction or role update.
+                await interaction.edit_original_response(embed=embed,view=view)
+                interaction_task = asyncio.create_task(client.wait_for('interaction'))
+                member_task = asyncio.create_task(client.wait_for('member_update'))
+                role_task = asyncio.create_task(client.wait_for('guild_role_delete'))
+                await asyncio.wait([interaction_task,member_task,role_task],return_when=asyncio.FIRST_COMPLETED)
+                await asyncio.sleep(1)
+
+            if view.close_check:
+              await interaction.delete_original_response()
+              break
+
+        except Exception as e:
+          print(e)
