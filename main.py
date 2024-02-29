@@ -282,13 +282,19 @@ def init_commands(client,tree):
     logger.info("Requesting manage tasks command.")
     await commands.manage_tasks(interaction,client,workflows[str(interaction.guild.id)])
 
-'''
+
   @tree.command(name="disconnect",description="Disconnects the bot and saves data to JSON.")
   @is_developer()
   async def disconnect(interaction):
     logger.info("Requesting disconnect command.")
     await commands.disconnect_command(client)
-'''
+
+  @tree.command(name="reset_server",description="Resets Workflow information stored about the server.")
+  @is_developer()
+  async def reset_server(interaction):
+    logger.info("Requesting reset server command.")
+    workflows[interaction.guild.id] = {}
+
 
 async def init_saved(client):
     # Loading workflows dictionary.

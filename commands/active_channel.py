@@ -359,7 +359,6 @@ async def set_active_channel_command(interaction, workflow, client):
 
     # Sending projects embed.
     while True:
-        
         # Creating embed for message.
         embed = discord.Embed(color=discord.Color.blurple(),title="Existing Projects")
 
