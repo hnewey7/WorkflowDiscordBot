@@ -345,14 +345,18 @@ async def set_active_channel_command(interaction, workflow, client):
 
     # Updating projects channel in workflow.
     workflow.active_channel = channel
+    logger.info("Active channel set.")
 
     # Getting workflow manager role.
     admin_role = await get_admin_role(guild)
 
     # Changing permissions for channel.
-    await channel.set_permissions(guild.default_role,send_messages=False,add_reactions=False,manage_messages=False)
-    await channel.set_permissions(admin_role,send_messages=True,add_reactions=False,manage_messages=True)
-    logger.info(f"Setting {channel.name} to project channel in {guild.name}.")
+    try:
+      await channel.set_permissions(guild.default_role,send_messages=False,add_reactions=False,manage_messages=False)
+      await channel.set_permissions(admin_role,send_messages=True,add_reactions=False,manage_messages=True)
+      logger.info(f"Setting {channel.name} to project channel in {guild.name}.")
+    except:
+      logger.info("Unable to change permissions of active channel.")
 
     # Registering initial check.
     initial_check = True

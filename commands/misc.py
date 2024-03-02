@@ -9,6 +9,9 @@ Created on Wednesday 24th January 2024.
 import logging
 import discord
 
+global logger
+logger = logging.getLogger()
+
 # Help command.
 async def help_command(interaction,workflow):
     # Getting channel and guild.
@@ -89,8 +92,9 @@ async def delete_roles_command(command):
 async def get_admin_role(guild):
     # Getting workflow manager role.
     for role in await guild.fetch_roles():
-        if role.name == "Workflow Manager":
-            return role
+      if role.name == "Workflow Manager":
+        logger.info(f"Workflow Manager role found for {guild.id}")
+        return role
 
 # Check for team manager.
 def check_team_manager(member,guild,workflow):
