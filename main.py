@@ -298,16 +298,20 @@ def init_commands(client,tree):
   @tree.command(name="reset_server",description="Resets Workflow information stored about the server.")
   @is_developer()
   async def reset_server(interaction):
-    logger.info("Requesting reset server command.")
     try:
+      logger.info("Requesting reset server command.")
       # Deleting original Workflow.
       del workflows[str(interaction.guild.id)]
       # Creating new Workflow.
       workflows[str(interaction.guild.id)] = Workflow()
-      # Sending message.
-      await interaction.response.send_message("WorkflowBot has been reset for this server.",ephemeral=True)
-    except Exception as e:
-      logger.error(f"Error: {e}")
+    except KeyError as e:
+      logger.error(f"KeyError: {e}")
+      logger.error(f"Guild {e} not included in Workflows.")
+      # Creating workflow object.
+      logger.info("Creating new Workflow object for server.")
+      workflows[str(interaction.guild.id)] = Workflow()
+    # Sending message.
+    await interaction.response.send_message("WorkflowBot has been reset for this server.",ephemeral=True)
     
   @reset_server.error
   async def on_reset_server_error(interaction: discord.Interaction, error: discord.app_commands.AppCommandError):
