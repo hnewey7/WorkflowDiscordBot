@@ -293,7 +293,9 @@ def init_commands(client,tree):
   @is_developer()
   async def reset_server(interaction):
     logger.info("Requesting reset server command.")
-    workflows[interaction.guild.id] = {}
+    del workflows[str(interaction.guild.id)]
+
+    workflows[str(interaction.guild.id)] = Workflow()
     await interaction.response.send_message("WorkflowBot has been reset for this server.",ephemeral=True)
 
 
