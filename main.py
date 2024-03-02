@@ -25,11 +25,23 @@ def init_logging():
   global logger
   logger = logging.getLogger()
 
-  # Setting up logger with config.
-  config_file = pathlib.Path("logging_config.json")
-  with open(config_file) as f_in:
-    config = json.load(f_in)
-  logging.config.dictConfig(config)
+  # Getting logger.
+  logger.setLevel(logging.INFO)
+
+  # Creating formatter.
+  formatter = logging.Formatter(fmt="%(asctime)s:%(levelname)s:   %(message)s",datefmt="%Y-%m-%d %H:%M:%S")
+
+  # Creating stream handler.
+  stdout = logging.StreamHandler()
+  stdout.setLevel(logging.INFO)
+  stdout.setFormatter(formatter)
+  logger.addHandler(stdout)
+
+  # Creating file handler.
+  file_handler = logging.handlers.RotatingFileHandler(filename="logs/workflow_bot.log",mode="a",backupCount=3,maxBytes=10000000)
+  file_handler.setLevel(logging.INFO)
+  file_handler.setFormatter(formatter)
+  logger.addHandler(file_handler)
 
   # Adding logger to commands.
   commands.init_commands(logger)
