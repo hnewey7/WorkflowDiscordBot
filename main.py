@@ -289,6 +289,12 @@ def init_commands(client,tree):
     logger.info("Requesting disconnect command.")
     await commands.disconnect_command(client)
 
+  @disconnect.error
+  async def on_disconnect_error(interaction: discord.Interaction, error: discord.app_commands.AppCommandError):
+    if isinstance(error, discord.app_commands.CheckFailure):
+      await interaction.response.send_message("You do not have the necessary permissions to use this command.",ephemeral=True)
+
+
   @tree.command(name="reset_server",description="Resets Workflow information stored about the server.")
   @is_developer()
   async def reset_server(interaction):
@@ -302,6 +308,11 @@ def init_commands(client,tree):
       await interaction.response.send_message("WorkflowBot has been reset for this server.",ephemeral=True)
     except Exception as e:
       logger.error(f"Error: {e}")
+    
+  @reset_server.error
+  async def on_reset_server_error(interaction: discord.Interaction, error: discord.app_commands.AppCommandError):
+    if isinstance(error, discord.app_commands.CheckFailure):
+      await interaction.response.send_message("You do not have the necessary permissions to use this command.",ephemeral=True)
 
 
 async def init_saved(client):
