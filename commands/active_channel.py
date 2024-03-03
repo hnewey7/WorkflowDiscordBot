@@ -115,7 +115,7 @@ class AddProjectModal(discord.ui.Modal,title="New Project"):
 
     # Requires title and deadline for new project.
     title_input = discord.ui.TextInput(label="Please enter a project title: ",style=discord.TextStyle.short,placeholder="Title",required=True,max_length=100)
-    deadline_input = discord.ui.TextInput(label="Please enter a deadline (dd mm yyyy):",style=discord.TextStyle.short,placeholder="dd mm yyyy",required=True,max_length=10)
+    deadline_input = discord.ui.TextInput(label="Please enter a deadline (dd mm yyyy):",style=discord.TextStyle.short,placeholder="dd mm yyyy",required=False,max_length=10)
 
     async def on_submit(self, interaction: discord.Interaction):
         # Adds new project to workflow.

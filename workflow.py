@@ -22,8 +22,8 @@ class Workflow():
   # Project specific methods.
 
   # Create new project with title and deadline.
-  def add_project(self, title, deadline) -> None:
-    new_project = Project(title, deadline, len(self.projects)+1)
+  def add_project(self, title, deadline: str=None) -> None:
+    new_project = Project(title, len(self.projects)+1,deadline)
     self.projects.append(new_project)
     return new_project
 
@@ -123,10 +123,10 @@ class Workflow():
 
 class Project():
 
-  def __init__(self,name,deadline,id) -> None:
+  def __init__(self,name,id,deadline: str = None) -> None:
     self.name = name
     self.id = id
-    self.deadline = convert_deadline(deadline)
+    self.deadline = convert_deadline(deadline) if deadline else None
     self.tasks = []
     self.team_ids = []
     self.description = None

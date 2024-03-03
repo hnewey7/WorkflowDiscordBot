@@ -62,7 +62,7 @@ class ProjectSelectMenu(discord.ui.Select):
       if project.description:
         description += project.description
       # Creating project message.
-      embed = discord.Embed(color=discord.Color.blurple(),title=project.name + f" - due <t:{project.get_unix_deadline()}:R>" ,description=description)
+      embed = discord.Embed(color=discord.Color.blurple(),title=project.name + f" - due <t:{project.get_unix_deadline()}:R>" if project.deadline else project.name,description=description)
       # Adding status to message.
       status = f"**`{project.status}`**"
       embed.add_field(name="Status:",value=status,inline=True)
