@@ -123,7 +123,7 @@ class AddProjectModal(discord.ui.Modal,title="New Project"):
 
         # Sending update log in active channel.
         logger.info("Sending update log in active channel.")
-        update_embed = discord.Embed(colour=discord.Color.blurple(),description=f"{interaction.user.mention} created a new project, {self.title_input.value}.")
+        update_embed = discord.Embed(colour=discord.Color.blurple(),description=f"{interaction.user.mention} created a new project, `{self.title_input.value}`.")
         await self.workflow.active_channel.send(embed=update_embed,delete_after=60)
 
         await interaction.response.defer()
@@ -212,7 +212,7 @@ class DelProjectModal(discord.ui.Modal,title="Delete Project"):
 
         # Sending update log in active channel.
         logger.info("Sending update log in active channel.")
-        update_embed = discord.Embed(colour=discord.Color.blurple(),description=f"{interaction.user.mention} deleted a project, {project_title}.")
+        update_embed = discord.Embed(colour=discord.Color.blurple(),description=f"{interaction.user.mention} deleted a project, `{project_title}`.")
         await self.workflow.active_channel.send(embed=update_embed,delete_after=60)
 
         await interaction.response.defer()
@@ -241,7 +241,7 @@ class AddTaskModal(discord.ui.Modal,title="Add Task"):
 
         # Sending update log in active channel.
         logger.info("Sending update log in active channel.")
-        description = f"{interaction.user.mention} added task, ({new_task.name}), to {self.project.name}." if self.deadline_input.value == "" else f"{interaction.user.mention} added task, ({self.task_input.value} <t:{new_task.get_unix_deadline()}:R>), to {self.project.name}."
+        description = f"{interaction.user.mention} added task, (`{new_task.name}`), to `{self.project.name}`." if self.deadline_input.value == "" else f"{interaction.user.mention} added task, (`{self.task_input.value}` <t:{new_task.get_unix_deadline()}:R>), to `{self.project.name}`."
         update_embed = discord.Embed(colour=discord.Color.blurple(),description=description)
         await self.workflow.active_channel.send(embed=update_embed,delete_after=60)
 
@@ -272,7 +272,7 @@ class DelTaskModal(discord.ui.Modal,title="Delete Task"):
 
             # Sending update log in active channel.
             logger.info("Sending update log in active channel.")
-            update_embed = discord.Embed(colour=discord.Color.blurple(),description=f"{interaction.user.mention} deleted task, ({task_name}), from {self.project.name}.")
+            update_embed = discord.Embed(colour=discord.Color.blurple(),description=f"{interaction.user.mention} deleted task, (`{task_name}`), from `{self.project.name}`.")
             await self.workflow.active_channel.send(embed=update_embed,delete_after=60)
 
             await interaction.response.defer()
@@ -299,7 +299,7 @@ class EditTitleModal(discord.ui.Modal, title="Edit Title"):
         
         # Sending update log in active channel.
         logger.info("Sending update log in active channel.")
-        update_embed = discord.Embed(colour=discord.Color.blurple(),description=f"{interaction.user.mention} changed a project's title from {original_title} to {self.project.name}.")
+        update_embed = discord.Embed(colour=discord.Color.blurple(),description=f"{interaction.user.mention} changed a project's title from `{original_title}` to `{self.project.name}`.")
         await self.workflow.active_channel.send(embed=update_embed,delete_after=60)
 
         await interaction.response.defer()
@@ -323,7 +323,7 @@ class EditDeadlineModal(discord.ui.Modal, title="Edit Deadline"):
 
         # Sending update log in active channel.
         logger.info("Sending update log in active channel.")
-        update_embed = discord.Embed(colour=discord.Color.blurple(),description=f"{interaction.user.mention} changed {self.project.name}'s deadline to <t:{self.project.get_unix_deadline()}:R>.")
+        update_embed = discord.Embed(colour=discord.Color.blurple(),description=f"{interaction.user.mention} changed `{self.project.name}`'s deadline to <t:{self.project.get_unix_deadline()}:R>.")
         await self.workflow.active_channel.send(embed=update_embed,delete_after=60)
 
         await interaction.response.defer()

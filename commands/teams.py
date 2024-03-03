@@ -182,7 +182,7 @@ class AddTeamModal(discord.ui.Modal,title="New Team"):
 
         # Sending update log in active channel.
         logger.info("Sending update log in active channel.")
-        update_embed = discord.Embed(colour=discord.Color.blurple(),description=f"{interaction.user.mention} created a new team, {new_role.mention}.")
+        update_embed = discord.Embed(colour=discord.Color.blurple(),description=f"{interaction.user.mention} created a new team, `{new_role.mention}`.")
         await interaction.channel.send(embed=update_embed,delete_after=3)
         await self.workflow.active_channel.send(embed=update_embed,delete_after=60)
 
@@ -286,7 +286,7 @@ class DelTeamModal(discord.ui.Modal,title="Delete Team"):
 
         # Sending update log in active channel.
         logger.info("Sending update log in active channel.")
-        update_embed = discord.Embed(colour=discord.Color.blurple(),description=f"{interaction.user.mention} deleted a team, {deleted_team.name}.")
+        update_embed = discord.Embed(colour=discord.Color.blurple(),description=f"{interaction.user.mention} deleted a team, `{deleted_team.name}`.")
         await interaction.channel.send(embed=update_embed,delete_after=3)
         await self.workflow.active_channel.send(embed=update_embed,delete_after=60)
 
@@ -318,7 +318,7 @@ class ChangeTitleModal(discord.ui.Modal,title="Change Title"):
 
         # Sending update log in active channel.
         logger.info("Sending update log in active channel.")
-        update_embed = discord.Embed(colour=discord.Color.blurple(),description=f"{interaction.user.mention} changed the title of {original_title} to {self.workflow.teams[self.workflow.teams.index(self.team)].name}.")
+        update_embed = discord.Embed(colour=discord.Color.blurple(),description=f"{interaction.user.mention} changed the title of `{original_title}` to `{self.workflow.teams[self.workflow.teams.index(self.team)].name}`.")
         await interaction.channel.send(embed=update_embed,delete_after=3)
         await self.workflow.active_channel.send(embed=update_embed,delete_after=60)
         
