@@ -9,6 +9,7 @@ Created on Wednesday 24th January 2024.
 import discord
 import asyncio
 
+from templates import get_template_selection 
 from .misc import get_admin_role
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -29,8 +30,12 @@ class WorkflowButtonView(discord.ui.View):
         admin_role = await get_admin_role(interaction.guild)
         # Checking if user is admin role.
         if admin_role in interaction.user.roles:
-            # Sending add project modal.
-            await interaction.response.send_modal(AddProjectModal(workflow=self.workflow))
+            view = discord.ui.View()
+            # Creating template selection.
+            template_selection = await get_template_selection(self.workflow,interaction)
+            view.add_item(template_selection)
+            # Sending template selection
+            await interaction.response.send_message(content="Please select a project template:",view=view,ephemeral=True,delete_after=300)
         else:
             # Sending private message.
             await interaction.response.send_message("You do not have the necessary role to add projects to the workflow.",ephemeral=True)
@@ -107,30 +112,6 @@ class ProjectButtonView(discord.ui.View):
 # MODAL CLASSES.
 
 
-class AddProjectModal(discord.ui.Modal,title="New Project"):
-
-    def __init__(self,workflow):
-        super().__init__()
-        self.workflow = workflow
-
-    # Requires title and deadline for new project.
-    title_input = discord.ui.TextInput(label="Please enter a project title: ",style=discord.TextStyle.short,placeholder="Title",required=True,max_length=100)
-    deadline_input = discord.ui.TextInput(label="Please enter a deadline (dd mm yyyy):",style=discord.TextStyle.short,placeholder="dd mm yyyy",required=False,max_length=10)
-
-    async def on_submit(self, interaction: discord.Interaction):
-        # Adds new project to workflow.
-        self.workflow.add_project(self.title_input.value,self.deadline_input.value)
-
-        # Sending update log in active channel.
-        logger.info("Sending update log in active channel.")
-        update_embed = discord.Embed(colour=discord.Color.blurple(),description=f"{interaction.user.mention} created a new project, `{self.title_input.value}`.")
-        await self.workflow.active_channel.send(embed=update_embed,delete_after=60)
-
-        await interaction.response.defer()
-
-
-
-
 class EditProjectModal(discord.ui.Modal,title="Edit Project"):
 
     def __init__(self,workflow,client,user):
@@ -145,52 +126,56 @@ class EditProjectModal(discord.ui.Modal,title="Edit Project"):
     async def on_submit(self, interaction: discord.Interaction):
         initial_check = True
 
-        while True:
-            # Getting project.
-            project = self.workflow.projects[int(self.number_input.value)-1]
-            # Creating title.
-            title = f"{project.name} - Deadline <t:{project.get_unix_deadline()}:R>" if project.deadline else f"{project.name}"
-            # Creating task list.
-            task_list = ""
-            for team in project.get_teams_from_ids(self.workflow):
-              task_list += f"{self.workflow.active_message.guild.get_role(team.role_id).mention} "
-            if len(project.get_teams_from_ids(self.workflow)) != 0:
-              task_list += "\n"
-            if len(project.tasks) != 0:
-                index = 0
-                for task in project.tasks:
-                  if not task.archive:
-                    index += 1
-                    task_members_mention = ""
-                    task_status = ""
-                    if task.status:
-                      task_status += f"**`{task.status}`**"
-                    for member_id in task.member_ids:
-                        member = await self.workflow.active_message.guild.fetch_member(member_id)
-                        task_members_mention += member.mention 
-                    task_list += f'{index}. {task.name} - *Due <t:{task.get_unix_deadline()}:R>* {task_status} {task_members_mention}\n' if task.deadline and task.status != "COMPLETED" else \
-                    f'{index}. {task.name} {task_status} {task_members_mention}\n'
-            else:
-                task_list += "No tasks."
-            # Creating embed.
-            embed = discord.Embed(color=discord.Color.blurple(),title=title,description=task_list)
-            # Creating view.
-            view = ProjectButtonView(project=project,user=self.user,workflow=self.workflow)
-            if len(project.tasks) == 0:
-                view.del_task.disabled = True
-            # Checking if initial message.
-            if initial_check:
-                await interaction.response.send_message(embed=embed,view=view,delete_after=300,ephemeral=True)
-                initial_check = False
-                await self.client.wait_for('interaction')
-            else:
-                await interaction.edit_original_response(embed=embed,view=view)
-                await self.client.wait_for('interaction')
-            # Checking to close the message.
-            await asyncio.sleep(1)
-            if view.close_check:
-                await interaction.delete_original_response()
-                break
+        # Getting project.
+        project = self.workflow.projects[int(self.number_input.value)-1]
+
+        if project.__class__.__name__ != "DaysOfCode":
+          while True:
+              # Creating title.
+              title = f"{project.name} - Deadline <t:{project.get_unix_deadline()}:R>" if project.deadline else f"{project.name}"
+              # Creating task list.
+              task_list = ""
+              for team in project.get_teams_from_ids(self.workflow):
+                task_list += f"{self.workflow.active_message.guild.get_role(team.role_id).mention} "
+              if len(project.get_teams_from_ids(self.workflow)) != 0:
+                task_list += "\n"
+              if len(project.tasks) != 0:
+                  index = 0
+                  for task in project.tasks:
+                    if not task.archive:
+                      index += 1
+                      task_members_mention = ""
+                      task_status = ""
+                      if task.status:
+                        task_status += f"**`{task.status}`**"
+                      for member_id in task.member_ids:
+                          member = await self.workflow.active_message.guild.fetch_member(member_id)
+                          task_members_mention += member.mention 
+                      task_list += f'{index}. {task.name} - *Due <t:{task.get_unix_deadline()}:R>* {task_status} {task_members_mention}\n' if task.deadline and task.status != "COMPLETED" else \
+                      f'{index}. {task.name} {task_status} {task_members_mention}\n'
+              else:
+                  task_list += "No tasks."
+              # Creating embed.
+              embed = discord.Embed(color=discord.Color.blurple(),title=title,description=task_list)
+              # Creating view.
+              view = ProjectButtonView(project=project,user=self.user,workflow=self.workflow)
+              if len(project.tasks) == 0:
+                  view.del_task.disabled = True
+              # Checking if initial message.
+              if initial_check:
+                  await interaction.response.send_message(embed=embed,view=view,delete_after=300,ephemeral=True)
+                  initial_check = False
+                  await self.client.wait_for('interaction')
+              else:
+                  await interaction.edit_original_response(embed=embed,view=view)
+                  await self.client.wait_for('interaction')
+              # Checking to close the message.
+              await asyncio.sleep(1)
+              if view.close_check:
+                  await interaction.delete_original_response()
+                  break
+        else:
+          await interaction.response.send_message("Cannot edit 100 Days of Code project.",delete_after=10,ephemeral=True)
 
 
 

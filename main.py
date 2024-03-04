@@ -16,7 +16,7 @@ import json
 import asyncio
 
 import commands
-from workflow import Workflow
+import workflow
 from json_storage import save_to_json,convert_from_json
 
 # - - - - - - - - - - - - - - - - - - - - - - - 
@@ -113,7 +113,7 @@ def init_events(client,tree):
             logger.info("Workflow Manager role has been created.")
 
         # Creating workflow for guild.
-        new_workflow = Workflow()
+        new_workflow = workflow.Workflow()
         logger.info("Creating new workflow for server.")
 
         # Adding workflow to dictionary.
@@ -315,13 +315,13 @@ def init_commands(client,tree):
       # Deleting original Workflow.
       del workflows[str(interaction.guild.id)]
       # Creating new Workflow.
-      workflows[str(interaction.guild.id)] = Workflow()
+      workflows[str(interaction.guild.id)] = workflow.Workflow()
     except KeyError as e:
       logger.error(f"KeyError: {e}")
       logger.error(f"Guild {e} not included in Workflows.")
       # Creating workflow object.
       logger.info("Creating new Workflow object for server.")
-      workflows[str(interaction.guild.id)] = Workflow()
+      workflows[str(interaction.guild.id)] = workflow.Workflow()
     # Sending message.
     await interaction.response.send_message("WorkflowBot has been reset for this server.",ephemeral=True)
     

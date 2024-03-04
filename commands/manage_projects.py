@@ -58,87 +58,37 @@ class ProjectSelectMenu(discord.ui.Select):
     initial_check = True
     archive_check = False
     while True:
-      description = ""
-      if project.description:
-        description += project.description
-      # Creating project message.
-      embed = discord.Embed(color=discord.Color.blurple(),title=project.name + f" - due <t:{project.get_unix_deadline()}:R>" if project.deadline else project.name,description=description)
-      # Adding status to message.
-      status = f"**`{project.status}`**"
-      embed.add_field(name="Status:",value=status,inline=True)
-      # Adding priority to message.
-      if project.priority:
-        embed.add_field(name="Priority:",value=f"**`{project.priority}`**",inline=True)
-      # Adding teams to message.
-      teams_list = ""
-      if len(project.get_teams_from_ids(self.workflow)) != 0:
-        for team in project.get_teams_from_ids(self.workflow):
-          team_role = self.guild.get_role(team.role_id)
-          teams_list += f"- {team_role.mention}\n"
+      if project.__class__.__name__ == "DaysOfCode":
+        # Getting display message and view.
+        embed = project.display_message()
+        view = project.get_manage_view()
       else:
-        teams_list += "No teams."
-      embed.add_field(name="Teams:",value=teams_list,inline=True)
-      # Adding tasks to message.
-      task_list = ""
-      if len(project.tasks) != 0:
-        for task in project.tasks:
-          index = 0
-          if not task.archive:
-            index += 1
-            task_members_mention = ""
-            task_status = ""
-            if task.status:
-              task_status += f"**`{task.status}`**"
-            for member_id in task.member_ids:
-              member = await self.guild.fetch_member(member_id)
-              task_members_mention += member.mention 
-            task_list += f'{index}. {task.name} Due <t:{task.get_unix_deadline()}:R> {task_members_mention}\n' if task.deadline and task.status != "COMPLETED" else \
-            f'{index}. {task.name} {task_status} {task_members_mention}\n'
-          
-        if index == 0:
-          task_list += "No tasks."
-      else:
-        task_list += "No tasks."
-      embed.add_field(name="Tasks:",value=task_list,inline=False)
-
-      # Creating relevant view.
-      if await get_admin_role(self.guild) in self.command.user.roles:
-        view = WorkflowManagerIndividualProjectView(project,self.workflow,self.client,self.guild,self.command)
-        # Toggling buttons.
-        available_teams = get_team_selection(project,self.workflow,True)
-        if len(available_teams) == 0:
-          view.assign_team.disabled = True
-        available_teams = get_team_selection(project,self.workflow,False)
-        if len(available_teams) == 0:
-          view.remove_team.disabled = True
-        if get_completed_count(project) == 0:
-          view.archive_completed.disabled = True
-        if get_archive_count(project) == 0:
-          view.show_archive.disabled = True
-        if archive_check:
-          view.show_archive.disabled = True
-        if len(project.tasks) == 0:
-          view.edit_task.disabled = True
-          view.delete_task.disabled = True
-      else:
-        view = TeamManagerIndividualProjectView(project,self.workflow,self.client,self.guild,self.command)
-        # Toggling buttons.
-        if get_completed_count(project) == 0:
-          view.archive_completed.disabled = True
-        if get_archive_count(project) == 0:
-          view.show_archive.disabled = True
-        if archive_check:
-          view.show_archive.disabled = True
-        if len(project.tasks) == 0:
-          view.edit_task.disabled = True
-          view.delete_task.disabled = True
-
-      if archive_check:
+        description = ""
+        if project.description:
+          description += project.description
+        # Creating project message.
+        embed = discord.Embed(color=discord.Color.blurple(),title=project.name + f" - due <t:{project.get_unix_deadline()}:R>" if project.deadline else project.name,description=description)
+        # Adding status to message.
+        status = f"**`{project.status}`**"
+        embed.add_field(name="Status:",value=status,inline=True)
+        # Adding priority to message.
+        if project.priority:
+          embed.add_field(name="Priority:",value=f"**`{project.priority}`**",inline=True)
+        # Adding teams to message.
+        teams_list = ""
+        if len(project.get_teams_from_ids(self.workflow)) != 0:
+          for team in project.get_teams_from_ids(self.workflow):
+            team_role = self.guild.get_role(team.role_id)
+            teams_list += f"- {team_role.mention}\n"
+        else:
+          teams_list += "No teams."
+        embed.add_field(name="Teams:",value=teams_list,inline=True)
+        # Adding tasks to message.
         task_list = ""
         if len(project.tasks) != 0:
           for task in project.tasks:
             index = 0
-            if task.archive:
+            if not task.archive:
               index += 1
               task_members_mention = ""
               task_status = ""
@@ -149,9 +99,64 @@ class ProjectSelectMenu(discord.ui.Select):
                 task_members_mention += member.mention 
               task_list += f'{index}. {task.name} Due <t:{task.get_unix_deadline()}:R> {task_members_mention}\n' if task.deadline and task.status != "COMPLETED" else \
               f'{index}. {task.name} {task_status} {task_members_mention}\n'
+            
+          if index == 0:
+            task_list += "No tasks."
         else:
           task_list += "No tasks."
-        embed.add_field(name="Archived Tasks:",value=task_list,inline=False)
+        embed.add_field(name="Tasks:",value=task_list,inline=False)
+
+        # Creating relevant view.
+        if await get_admin_role(self.guild) in self.command.user.roles:
+          view = WorkflowManagerIndividualProjectView(project,self.workflow,self.client,self.guild,self.command)
+          # Toggling buttons.
+          available_teams = get_team_selection(project,self.workflow,True)
+          if len(available_teams) == 0:
+            view.assign_team.disabled = True
+          available_teams = get_team_selection(project,self.workflow,False)
+          if len(available_teams) == 0:
+            view.remove_team.disabled = True
+          if get_completed_count(project) == 0:
+            view.archive_completed.disabled = True
+          if get_archive_count(project) == 0:
+            view.show_archive.disabled = True
+          if archive_check:
+            view.show_archive.disabled = True
+          if len(project.tasks) == 0:
+            view.edit_task.disabled = True
+            view.delete_task.disabled = True
+        else:
+          view = TeamManagerIndividualProjectView(project,self.workflow,self.client,self.guild,self.command)
+          # Toggling buttons.
+          if get_completed_count(project) == 0:
+            view.archive_completed.disabled = True
+          if get_archive_count(project) == 0:
+            view.show_archive.disabled = True
+          if archive_check:
+            view.show_archive.disabled = True
+          if len(project.tasks) == 0:
+            view.edit_task.disabled = True
+            view.delete_task.disabled = True
+
+        if archive_check:
+          task_list = ""
+          if len(project.tasks) != 0:
+            for task in project.tasks:
+              index = 0
+              if task.archive:
+                index += 1
+                task_members_mention = ""
+                task_status = ""
+                if task.status:
+                  task_status += f"**`{task.status}`**"
+                for member_id in task.member_ids:
+                  member = await self.guild.fetch_member(member_id)
+                  task_members_mention += member.mention 
+                task_list += f'{index}. {task.name} Due <t:{task.get_unix_deadline()}:R> {task_members_mention}\n' if task.deadline and task.status != "COMPLETED" else \
+                f'{index}. {task.name} {task_status} {task_members_mention}\n'
+          else:
+            task_list += "No tasks."
+          embed.add_field(name="Archived Tasks:",value=task_list,inline=False)
 
       if initial_check:
         await interaction.response.send_message(embed=embed,view=view,delete_after=300,ephemeral=True)
