@@ -8,6 +8,8 @@ Created on Tuesday 2nd January 2024
 
 from datetime import datetime
 
+import templates
+
 # - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 class Workflow():
@@ -24,6 +26,12 @@ class Workflow():
   # Create new project with title and deadline.
   def add_project(self, title, deadline: str=None) -> None:
     new_project = Project(title, len(self.projects)+1,deadline)
+    self.projects.append(new_project)
+    return new_project
+  
+  # Adding 100 days of code project.
+  def add_100days_project(self) -> None:
+    new_project = templates.DaysOfCode(len(self.projects)+1)
     self.projects.append(new_project)
     return new_project
 
