@@ -70,6 +70,19 @@ class Workflow():
     for project in self.projects:
       if project.name == name:
         return project
+      
+  def get_days_of_code(self):
+    """ Returning 100 Days of Code project."""
+    for project in self.projects:
+      if project.__class__.__name__ == "DaysOfCode":
+        return project
+      
+  def check_days_of_code(self) -> bool:
+    """ Checking if days of code project is present."""
+    for project in self.projects:
+      if project.__class__.__name__ == "DaysOfCode":
+        return True
+    return False
 
   #   -   -   -   -   -   -   -   -   -   -   -   -   -
   # Team specific methods.

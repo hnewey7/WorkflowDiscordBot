@@ -295,6 +295,24 @@ def init_commands(client,tree):
     await commands.manage_tasks(interaction,client,workflows[str(interaction.guild.id)])
 
 
+  @tree.command(name="days_of_code",description="Allows users to track progress of 100 Days of Code project.")
+  @discord.app_commands.checks.has_role("Workflow Manager")
+  async def days_of_code_command(interaction):
+    logger.info("Requesting days of code command by Workflow Manager.")
+    if not workflows[str(interaction.guild.id)].check_days_of_code():
+      await commands.send_new_project_message(interaction,workflows[str(interaction.guild.id)],client)
+    else:
+      await commands.send_standard_message(interaction,workflows[str(interaction.guild.id)],client)
+
+  @days_of_code_command.error
+  async def on_days_of_code_error(interaction:discord.Interaction,error:discord.app_commands.AppCommandError):
+    if isinstance(error, discord.app_commands.CheckFailure):
+      if workflows[str(interaction.guild.id)].check_days_of_code():
+        await commands.send_standard_message(interaction,workflows[str(interaction.guild.id)],client)
+      else:
+        await interaction.response.send_message(embed=discord.Embed(description="No 100 Days of Code project available, please ask your Workflow Manager to create the project."))
+
+
   @tree.command(name="disconnect",description="Disconnects the bot and saves data to JSON.")
   @is_developer()
   async def disconnect(interaction):
@@ -359,10 +377,15 @@ async def init_message_looping(client):
             restart_looping_task = asyncio.create_task(commands.restart_looping(client,workflows[guild_id],await client.fetch_guild(guild_id)))
             task_list.append(restart_looping_task)
     
+    # Restarting progress looping.
+    logger.info("Restarting progress looping.")
+    progress_task = asyncio.create_task(commands.restart_days_of_code_looping(workflows,client))
+    task_list.append(progress_task)
+
     logger.info("- - - - - - - - - - - - - - - - - - - - - -")
+
     if len(task_list) != 0:
       await asyncio.wait(task_list)
-    
 
 # - - - - - - - - - - - - - - - - - - - - - - - 
 
