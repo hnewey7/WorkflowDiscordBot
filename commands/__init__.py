@@ -13,6 +13,7 @@ from .teams import display_teams
 from .manage_projects import manage_projects
 from .manage_task import manage_tasks
 from .misc import help_command,disconnect_command, show_workflow_command, show_guild_command, delete_roles_command, tutorial_command
+from .days_of_code import send_new_project_message, send_existing_project_message, send_standard_message, restart_days_of_code_looping
 
 
 # Initialising commands.
