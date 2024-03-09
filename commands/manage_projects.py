@@ -60,7 +60,7 @@ class ProjectSelectMenu(discord.ui.Select):
     while True:
       if project.__class__.__name__ == "DaysOfCode":
         # Getting display message and view.
-        embed = project.display_message()
+        embed = project.display_message(interaction.user)
         view = project.get_manage_view()
       else:
         description = ""

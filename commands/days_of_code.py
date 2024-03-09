@@ -131,7 +131,7 @@ async def restart_days_of_code_looping(workflows,client):
     # Checking if over 24 hours.
     for project in days_of_code_projects:
       for member_id in project.time_checked.keys():
-        if time.time() - project.time_checked[member_id] > 20:
+        if time.time() - project.time_checked[member_id] > 24 * 60 * 60:
           # Updating time.
           project.time_checked[member_id] = time.time()
           # Updating progress.

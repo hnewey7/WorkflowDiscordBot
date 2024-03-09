@@ -14,6 +14,7 @@ import logging.config
 import logging.handlers
 import json
 import asyncio
+import traceback
 
 import commands
 import workflow
@@ -298,11 +299,14 @@ def init_commands(client,tree):
   @tree.command(name="days_of_code",description="Allows users to track progress of 100 Days of Code project.")
   @discord.app_commands.checks.has_role("Workflow Manager")
   async def days_of_code_command(interaction):
-    logger.info("Requesting days of code command by Workflow Manager.")
-    if not workflows[str(interaction.guild.id)].check_days_of_code():
-      await commands.send_new_project_message(interaction,workflows[str(interaction.guild.id)],client)
-    else:
-      await commands.send_standard_message(interaction,workflows[str(interaction.guild.id)],client)
+    try:
+      logger.info("Requesting days of code command by Workflow Manager.")
+      if not workflows[str(interaction.guild.id)].check_days_of_code():
+        await commands.send_new_project_message(interaction,workflows[str(interaction.guild.id)],client)
+      else:
+        await commands.send_standard_message(interaction,workflows[str(interaction.guild.id)],client)
+    except Exception as e:
+      print(traceback.format_exc())
 
   @days_of_code_command.error
   async def on_days_of_code_error(interaction:discord.Interaction,error:discord.app_commands.AppCommandError):

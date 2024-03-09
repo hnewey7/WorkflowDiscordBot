@@ -29,6 +29,7 @@ class DaysOfCode(workflow.Project):
 
     # List of members, progress and time dictionaries.
     self.members: list[discord.Member] = []
+    self.member_ids: list = []
     self.progress: dict = {}
     self.time_checked: dict = {}
 
@@ -37,6 +38,10 @@ class DaysOfCode(workflow.Project):
     self.members.append(member)
     self.progress[member.id] = ["m"]
     self.time_checked[member.id] = time.time()
+
+  def add_member_from_id(self,id,guild) -> None:
+    """ Adding member from id."""
+    self.members
 
   def get_progress_string(self,member) -> str:
     """ Producing string of member progress."""
@@ -62,7 +67,7 @@ class DaysOfCode(workflow.Project):
       output = "".join(individual_list) + f" {counter}/{total}"
     return output
   
-  def get_top_progess(self,exclude:None) -> str:
+  def get_top_progess(self,exclude=None) -> str:
     """ Producing string of top members."""
     output: str = ""
     member_score: dict = {}
